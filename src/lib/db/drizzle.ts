@@ -17,7 +17,7 @@ export function createDb() {
     user: DB_USER,
     password: DB_PASSWORD,
     database: DB_NAME,
-    ssl: true,
+    ssl: false, // Direct PostgreSQL connection without SSL termination
   });
 
   return drizzle({ client: pool, schema });
