@@ -13,7 +13,7 @@ permissions:
 jobs:
   deploy:
     name: Cloudflare
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'preview' }}
     concurrency:
       group: deploy-${{ github.ref }}
