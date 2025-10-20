@@ -47,6 +47,7 @@ const schema: EnvSchema = {
     DB_USER: privateString,
     DISCORD_BOT_TOKEN: privateString,
     DISCORD_PUBLIC_KEY: privateString,
+    FILE_SHARING_JWT_PUBLIC_KEY: privateString,
     GRAFANA_API_KEY: privateString,
     GRAFANA_USERNAME: privateString,
     KC_CLIENT_ID: privateString,
@@ -55,6 +56,10 @@ const schema: EnvSchema = {
     PADDLE_API_KEY: privateString,
     PADDLE_WEBHOOK_SECRET: privateString,
     POSTHOG_API_KEY: privateString,
+    S3_ACCESS_KEY_ID: privateString,
+    S3_BUCKET: privateString,
+    S3_ENDPOINT: privateString,
+    S3_SECRET_ACCESS_KEY: privateString,
 }
 
 export default schema;
