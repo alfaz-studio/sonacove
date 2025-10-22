@@ -1,5 +1,6 @@
 import { S3Client } from "bun";
 import { getLogger } from "./modules/pino-logger";
+import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
 
 const logger = getLogger();
 
@@ -31,10 +32,10 @@ export interface FileMetadata {
  */
 export function createS3Client(): S3Client {
   const config: S3Config = {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || "dummy-access-key",
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "dummy-secret-key",
-    bucket: process.env.S3_BUCKET || "file-sharing-bucket",
-    endpoint: process.env.S3_ENDPOINT || "https://s3.amazonaws.com",
+    accessKeyId: S3_ACCESS_KEY_ID,
+    secretAccessKey: S3_SECRET_ACCESS_KEY,
+    bucket: S3_BUCKET,
+    endpoint: S3_ENDPOINT,
   };
 
   logger.info({

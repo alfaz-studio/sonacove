@@ -1,48 +1,54 @@
-name: Test Preview Deployment
+name: Test Preview
 
 on:
-  workflow_run:
-    workflows: ["Deploy"]
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      preview-url:
+        description: 'Preview URL to test against'
+        required: true
+        type: string
+      working-directory:
+        description: 'Working directory for the tests'
+        required: false
+        type: string
+        default: '.'
 
 permissions:
   contents: read
   pull-requests: write
-  actions: read
 
 jobs:
   test-preview:
     name: Test Preview Deployment
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Download preview URL
-        uses: actions/download-artifact@v4
-        with:
-          name: preview-url
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Run all tests
+      - name: Run tests against preview
         run: |
-          PREVIEW_URL=$(cat preview-url.txt)
-          echo "🧪 Running all tests against: $PREVIEW_URL"
-          TEST_API_ENDPOINT="$PREVIEW_URL" bun test
+          echo "🧪 Running all tests against: ${{ inputs.preview-url }}"
+          TEST_API_ENDPOINT="${{ inputs.preview-url }}" bun test
+        working-directory: ${{ inputs.working-directory }}
         env:
           NODE_ENV: test
 
@@ -55,9 +61,9 @@ jobs:
             ## 🧪 Preview Testing Results
 
             **Status:** ${{ job.status == 'success' && '✅ All tests passed' || '❌ Some tests failed' }}
-            **Preview URL:** $(cat preview-url.txt 2>/dev/null || echo "Unknown")
+            **Preview URL:** ${{ inputs.preview-url }}
             **Test Suite:** All Tests
-            **Commit:** ${{ github.event.workflow_run.head_sha }}
+            **Commit:** ${{ github.sha }}
 
             ${{ job.status == 'success' && '🎉 All tests passed successfully against the preview deployment!' || '⚠️ Some tests failed. Please check the workflow logs for details.' }}
 

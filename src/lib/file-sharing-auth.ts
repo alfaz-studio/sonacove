@@ -1,5 +1,6 @@
 import { jwtVerify, importSPKI } from "jose";
 import { getLogger } from "./modules/pino-logger";
+import { FILE_SHARING_JWT_PUBLIC_KEY } from "astro:env/server";
 
 const logger = getLogger();
 
@@ -41,12 +42,8 @@ export interface FileSharingAuthResult {
  */
 export async function validateFileSharingToken(token: string): Promise<FileSharingAuthResult> {
   try {
-    // Get public key from environment variable
-    const publicKeyPem = process.env.FILE_SHARING_JWT_PUBLIC_KEY;
-    if (!publicKeyPem) {
-      logger.error("FILE_SHARING_JWT_PUBLIC_KEY environment variable not set");
-      return { isValid: false, error: "JWT public key not configured" };
-    }
+    // Get public key from Astro environment
+    const publicKeyPem = FILE_SHARING_JWT_PUBLIC_KEY;
 
     // Import the public key
     const publicKey = await importSPKI(publicKeyPem, "RS256");

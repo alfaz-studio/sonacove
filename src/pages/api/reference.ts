@@ -1,13 +1,12 @@
 import type { APIRoute } from "astro";
 // modules folder contains files for common operations
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
+import { CF_WEBHOOK_SECRET } from "astro:env/server";
 
 // We use drizzle for typesafe db access
 // import { createDb } from "../../lib/db/drizzle";
 // import { users, bookedRooms } from "../../lib/db/schema";
 // import { eq, and } from "drizzle-orm";
-
-// import { CF_WEBHOOK_SECRET } from "astro:env/server";
 
 
 export const prerender = false;
@@ -28,8 +27,14 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       const authHeader = request.headers.get("Authorization");
       const secretToken = authHeader?.replace("Bearer ", "");
 
-      // Prefer getting env vars through Astro
-      // secretToken === CF_WEBHOOK_SECRET ? "Success" : return new Response
+      // Verify secret token using Astro env
+      if (!secretToken || secretToken !== CF_WEBHOOK_SECRET) {
+        logger.error("Invalid or missing authentication token");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
   
       // Parse the request body
       interface CustomRequestBody {
