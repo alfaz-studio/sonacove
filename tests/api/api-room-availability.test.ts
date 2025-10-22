@@ -254,8 +254,8 @@ describe("API: /api/room-availability", () => {
     expect(lowerResponse.status).toBe(200);
     expect(upperResponse.status).toBe(200);
     
-    const lowerData = await lowerResponse.json();
-    const upperData = await upperResponse.json();
+    const lowerData = await lowerResponse.json() as { available: boolean; roomName: string };
+    const upperData = await upperResponse.json() as { available: boolean; roomName: string };
     
     expect(lowerData).toHaveProperty("available", true);
     expect(upperData).toHaveProperty("available", true);

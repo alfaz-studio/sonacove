@@ -40,9 +40,10 @@ const UserCard: React.FC<UserCardProps> = ({ user, meetingsList, recordings, not
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((response) => response.json())
-        .then((data) => {
-          if (data.url) {
-            setSubscriptionUrl(data.url);
+        .then((data: unknown) => {
+          const typedData = data as { url?: string };
+          if (typedData.url) {
+            setSubscriptionUrl(typedData.url);
           }
         })
         .catch((error) =>

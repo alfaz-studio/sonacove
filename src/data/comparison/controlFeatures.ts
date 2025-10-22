@@ -1,4 +1,4 @@
-import type { TableRow } from "../../components/comparison/types.ts";
+import type { TableRow } from "../../pages/comparison/types.ts";
 
 export const controlFeaturesData: TableRow[] = [
   {
