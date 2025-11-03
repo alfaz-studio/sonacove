@@ -1,4 +1,5 @@
-import { S3Client } from "bun";
+import { S3Client, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getLogger } from "./modules/pino-logger";
 import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
 
@@ -27,7 +28,28 @@ export interface FileMetadata {
 }
 
 /**
- * Creates and configures an S3 client using Bun's native S3 API.
+ * Extracts region from S3-compatible endpoint (e.g., in-maa-1.linodeobjects.com -> in-maa-1).
+ * Falls back to us-east-1 if region cannot be determined.
+ */
+function extractRegionFromEndpoint(endpoint: string): string {
+  // Extract region from Linode/Akamai format: {region}.linodeobjects.com
+  const linodeMatch = endpoint.match(/^([a-z]+-[a-z0-9]+)\.linodeobjects\.com/);
+  if (linodeMatch) {
+    return linodeMatch[1];
+  }
+
+  // For AWS endpoints, try to extract region
+  const awsMatch = endpoint.match(/\.([a-z0-9-]+)\.amazonaws\.com/);
+  if (awsMatch) {
+    return awsMatch[1];
+  }
+
+  // Default fallback for S3-compatible storage
+  return "us-east-1";
+}
+
+/**
+ * Creates and configures an S3 client using AWS SDK for S3-compatible storage.
  * Uses environment variables for configuration.
  */
 export function createS3Client(): S3Client {
@@ -38,13 +60,24 @@ export function createS3Client(): S3Client {
     endpoint: S3_ENDPOINT,
   };
 
+  const region = extractRegionFromEndpoint(config.endpoint);
+
   logger.info({
     bucket: config.bucket,
     endpoint: config.endpoint,
+    region,
     hasCredentials: !!(config.accessKeyId && config.secretAccessKey)
-  }, "Creating S3 client");
+  }, "Creating S3 client (AWS SDK for S3-compatible storage)");
 
-  return new S3Client(config);
+  return new S3Client({
+    region,
+    endpoint: config.endpoint,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
 }
 
 /**
@@ -65,17 +98,19 @@ export async function uploadFile(
   try {
     const s3 = createS3Client();
     const key = `${sessionId}/${fileId}`;
-    
+
     logger.info({
       key,
       size: fileBlob.size,
       fileName: metadata.fileName
     }, "Uploading file to S3");
 
-    // Upload the file
-    await s3.write(key, fileBlob, {
-      type: fileBlob.type || "application/octet-stream",
-    });
+    await s3.send(new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: fileBlob,
+      ContentType: (fileBlob as any).type || "application/octet-stream",
+    }));
 
     logger.info({ key }, "File uploaded successfully");
     return true;
@@ -106,21 +141,19 @@ export async function generatePresignedUrl(
   try {
     const s3 = createS3Client();
     const key = `${sessionId}/${fileId}`;
-    
+
     logger.info({ key, expiresInHours }, "Generating presigned URL");
 
-    // Check if file exists first
-    const exists = await s3.exists(key);
-    if (!exists) {
+    // Check existence via HeadObject
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+    } catch (err) {
       logger.warn({ key }, "File not found in S3");
       return null;
     }
 
-    // Generate presigned URL (synchronous operation in Bun)
-    const url = s3.presign(key, {
-      expiresIn: expiresInHours * 60 * 60, // Convert hours to seconds
-      method: "GET",
-    });
+    const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
+    const url = await getSignedUrl(s3, command, { expiresIn: expiresInHours * 60 * 60 });
 
     logger.info({ key, url }, "Presigned URL generated");
     return url;
@@ -145,10 +178,10 @@ export async function deleteFile(sessionId: string, fileId: string): Promise<boo
   try {
     const s3 = createS3Client();
     const key = `${sessionId}/${fileId}`;
-    
+
     logger.info({ key }, "Deleting file from S3");
 
-    await s3.delete(key);
+    await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }));
 
     logger.info({ key }, "File deleted successfully");
     return true;
@@ -173,10 +206,15 @@ export async function fileExists(sessionId: string, fileId: string): Promise<boo
   try {
     const s3 = createS3Client();
     const key = `${sessionId}/${fileId}`;
-    
-    const exists = await s3.exists(key);
-    logger.debug({ key, exists }, "File existence check");
-    return exists;
+
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+      logger.debug({ key, exists: true }, "File existence check");
+      return true;
+    } catch (err) {
+      logger.debug({ key, exists: false }, "File existence check");
+      return false;
+    }
 
   } catch (error) {
     logger.error(error, "Failed to check file existence", {
