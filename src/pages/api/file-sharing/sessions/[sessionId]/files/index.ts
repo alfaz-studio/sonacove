@@ -2,9 +2,17 @@ import type { APIRoute } from "astro";
 import { getLogger, logWrapper } from "../../../../../../lib/modules/pino-logger";
 import { validateFileSharingToken, extractBearerToken } from "../../../../../../lib/file-sharing-auth";
 import { uploadFile, validateFileSize, MAX_FILE_SIZE, type FileMetadata } from "../../../../../../lib/s3-client";
+import { getCorsHeaders } from "../../../../../../lib/cors";
 
 export const prerender = false;
 const logger = getLogger();
+
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(),
+  });
+};
 
 export const POST: APIRoute = async (c) => {
   return await logWrapper(c, WorkerHandler);
@@ -27,7 +35,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error("Missing sessionId in URL parameters");
       return new Response(JSON.stringify({ error: "Missing sessionId" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -39,7 +50,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -48,7 +62,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ error: authResult.error }, "Invalid JWT token");
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -62,7 +79,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       }, "SessionId mismatch");
       return new Response(JSON.stringify({ error: "SessionId mismatch" }), {
         status: 403,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -74,7 +94,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error(error, "Failed to parse multipart form data");
       return new Response(JSON.stringify({ error: "Invalid form data" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -89,7 +112,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       }, "Missing required form fields");
       return new Response(JSON.stringify({ error: "Missing metadata or file" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -101,7 +127,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error(error, "Failed to parse metadata JSON");
       return new Response(JSON.stringify({ error: "Invalid metadata JSON" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -110,7 +139,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ metadata }, "Missing required metadata fields");
       return new Response(JSON.stringify({ error: "Missing required metadata fields" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -124,7 +156,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
         error: `File too large. Maximum size is ${MAX_FILE_SIZE} bytes` 
       }), {
         status: 413,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -136,7 +171,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       }, "File size mismatch");
       return new Response(JSON.stringify({ error: "File size mismatch" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -147,7 +185,10 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error("Failed to upload file to S3");
       return new Response(JSON.stringify({ error: "Failed to upload file" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -162,14 +203,20 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
     // Return success response
     return new Response(JSON.stringify({ fileId: metadata.fileId }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getCorsHeaders(),
+      },
     });
 
   } catch (error) {
     logger.error(error, "Error in file upload handler");
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getCorsHeaders(),
+      },
     });
   }
 };

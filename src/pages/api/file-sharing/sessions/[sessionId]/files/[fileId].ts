@@ -2,9 +2,17 @@ import type { APIRoute } from "astro";
 import { getLogger, logWrapper } from "../../../../../../lib/modules/pino-logger";
 import { validateFileSharingToken, extractBearerToken } from "../../../../../../lib/file-sharing-auth";
 import { generatePresignedUrl, deleteFile, fileExists } from "../../../../../../lib/s3-client";
+import { getCorsHeaders } from "../../../../../../lib/cors";
 
 export const prerender = false;
 const logger = getLogger();
+
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(),
+  });
+};
 
 export const GET: APIRoute = async (c) => {
   return await logWrapper(c, GetWorkerHandler);
@@ -30,7 +38,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ sessionId, fileId }, "Missing sessionId or fileId in URL parameters");
       return new Response(JSON.stringify({ error: "Missing sessionId or fileId" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -42,7 +53,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -51,7 +65,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ error: authResult.error }, "Invalid JWT token");
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -65,7 +82,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       }, "SessionId mismatch");
       return new Response(JSON.stringify({ error: "SessionId mismatch" }), {
         status: 403,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -75,7 +95,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.warn({ sessionId, fileId }, "File not found");
       return new Response(JSON.stringify({ error: "File not found" }), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -86,7 +109,10 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ sessionId, fileId }, "Failed to generate presigned URL");
       return new Response(JSON.stringify({ error: "Failed to generate download URL" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -102,14 +128,20 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       presignedUrl 
     }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getCorsHeaders(),
+      },
     });
 
   } catch (error) {
     logger.error(error, "Error in file download handler");
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getCorsHeaders(),
+      },
     });
   }
 };
@@ -130,7 +162,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ sessionId, fileId }, "Missing sessionId or fileId in URL parameters");
       return new Response(JSON.stringify({ error: "Missing sessionId or fileId" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -142,7 +177,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -151,7 +189,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ error: authResult.error }, "Invalid JWT token");
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -165,7 +206,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       }, "SessionId mismatch");
       return new Response(JSON.stringify({ error: "SessionId mismatch" }), {
         status: 403,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -175,7 +219,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.warn({ sessionId, fileId }, "File not found for deletion");
       return new Response(JSON.stringify({ error: "File not found" }), {
         status: 404,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -186,7 +233,10 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
       logger.error({ sessionId, fileId }, "Failed to delete file from S3");
       return new Response(JSON.stringify({ error: "Failed to delete file" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getCorsHeaders(),
+        },
       });
     }
 
@@ -197,13 +247,19 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
     }, "File deleted successfully");
 
     // Return success response (200 OK with empty body)
-    return new Response(null, { status: 200 });
+    return new Response(null, { 
+      status: 200,
+      headers: getCorsHeaders(),
+    });
 
   } catch (error) {
     logger.error(error, "Error in file deletion handler");
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...getCorsHeaders(),
+      },
     });
   }
 };
