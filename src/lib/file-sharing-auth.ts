@@ -13,17 +13,21 @@ export interface FileSharingTokenPayload {
   context: {
     group?: string;
     user: {
-      id: string;
-      name: string;
+      id?: string;
+      name?: string;
       email?: string;
-      nick: string;
+      nick?: string;
     };
-    features?: string[];
+    /**
+     * Prosody issues file-sharing tokens with a map of feature flags (boolean values) rather than an array.
+     * Keep this permissive to avoid validation failures when new flags are added.
+     */
+    features?: Record<string, boolean> | string[];
   };
   room: string;
   meeting_id: string;
   granted_from?: string;
-  customer_id: string;
+  customer_id?: string;
   backend_region?: string;
   user_region?: string;
 }
@@ -49,6 +53,12 @@ export async function validateFileSharingToken(token: string): Promise<FileShari
     const publicKey = await importSPKI(publicKeyPem, "RS256");
 
     // Verify the token
+    // jwtVerify automatically validates:
+    // - Signature (using the public key)
+    // - Expiry (exp claim)
+    // - Not before (nbf claim)
+    // - Audience (aud claim)
+    // - Issuer (iss claim)
     const { payload } = await jwtVerify(token, publicKey, {
       audience: "file-sharing",
       issuer: "prosody",
@@ -58,7 +68,7 @@ export async function validateFileSharingToken(token: string): Promise<FileShari
     const typedPayload = payload as unknown as FileSharingTokenPayload;
 
     // Additional validation
-    if (!typedPayload.meeting_id || !typedPayload.room || !typedPayload.customer_id) {
+    if (!typedPayload.meeting_id || !typedPayload.room) {
       logger.warn({ 
         meeting_id: typedPayload.meeting_id,
         room: typedPayload.room,
@@ -67,11 +77,18 @@ export async function validateFileSharingToken(token: string): Promise<FileShari
       return { isValid: false, error: "Token missing required fields" };
     }
 
+    const userId =
+      typedPayload.context?.user?.id
+      ?? typedPayload.context?.user?.email
+      ?? typedPayload.context?.user?.name
+      ?? typedPayload.context?.user?.nick
+      ?? "unknown-user";
+
     logger.info({
       meeting_id: typedPayload.meeting_id,
       room: typedPayload.room,
       customer_id: typedPayload.customer_id,
-      user_id: typedPayload.context.user.id
+      user_id: userId
     }, "Token validated successfully");
 
     return { isValid: true, payload: typedPayload };

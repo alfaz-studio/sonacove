@@ -73,6 +73,12 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
     }
 
     const payload = authResult.payload!;
+    const userId =
+      payload.context?.user?.id
+      ?? payload.context?.user?.email
+      ?? payload.context?.user?.name
+      ?? payload.context?.user?.nick
+      ?? "unknown-user";
 
     // Verify the sessionId matches the meeting_id in the token
     if (payload.meeting_id !== sessionId) {
@@ -119,7 +125,7 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
     logger.info({
       sessionId,
       fileId,
-      userId: payload.context.user.id
+      userId
     }, "Presigned URL generated");
 
     // Return presigned URL and filename
@@ -197,6 +203,12 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
     }
 
     const payload = authResult.payload!;
+    const userId =
+      payload.context?.user?.id
+      ?? payload.context?.user?.email
+      ?? payload.context?.user?.name
+      ?? payload.context?.user?.nick
+      ?? "unknown-user";
 
     // Verify the sessionId matches the meeting_id in the token
     if (payload.meeting_id !== sessionId) {
@@ -243,7 +255,7 @@ const DeleteWorkerHandler: APIRoute = async ({ request, params }) => {
     logger.info({
       sessionId,
       fileId,
-      userId: payload.context.user.id
+      userId
     }, "File deleted successfully");
 
     // Return success response (200 OK with empty body)

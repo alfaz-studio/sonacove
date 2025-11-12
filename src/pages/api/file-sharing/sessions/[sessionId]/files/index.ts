@@ -192,12 +192,19 @@ const WorkerHandler: APIRoute = async ({ request, params }) => {
       });
     }
 
+    const userId =
+      payload.context?.user?.id
+      ?? payload.context?.user?.email
+      ?? payload.context?.user?.name
+      ?? payload.context?.user?.nick
+      ?? "unknown-user";
+
     logger.info({
       sessionId,
       fileId: metadata.fileId,
       fileName: metadata.fileName,
       fileSize: fileBlob.size,
-      userId: payload.context.user.id
+      userId
     }, "File uploaded successfully");
 
     // Return success response

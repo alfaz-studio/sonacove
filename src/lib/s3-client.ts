@@ -105,11 +105,16 @@ export async function uploadFile(
       fileName: metadata.fileName
     }, "Uploading file to S3");
 
+    // Convert Blob to Buffer for S3 upload
+    // The AWS SDK needs a Buffer/ArrayBuffer, not a Blob stream
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
-      Body: fileBlob,
-      ContentType: (fileBlob as any).type || "application/octet-stream",
+      Body: buffer,
+      ContentType: fileBlob.type || metadata.fileType || "application/octet-stream",
     }));
 
     logger.info({ key }, "File uploaded successfully");
