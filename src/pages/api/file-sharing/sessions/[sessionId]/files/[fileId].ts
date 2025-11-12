@@ -108,8 +108,8 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       });
     }
 
-    // Generate presigned URL (24 hours expiry)
-    const presignedUrl = await generatePresignedUrl(sessionId, fileId, 24);
+    // Generate presigned URL (24 hours expiry) and retrieve original filename
+    const { url: presignedUrl, fileName: originalFileName } = await generatePresignedUrl(sessionId, fileId, 24);
     
     if (!presignedUrl) {
       logger.error({ sessionId, fileId }, "Failed to generate presigned URL");
@@ -122,15 +122,19 @@ const GetWorkerHandler: APIRoute = async ({ request, params }) => {
       });
     }
 
+    // Use original filename if available, otherwise fall back to fileId
+    const fileName = originalFileName || fileId;
+
     logger.info({
       sessionId,
       fileId,
+      fileName,
       userId
     }, "Presigned URL generated");
 
     // Return presigned URL and filename
     return new Response(JSON.stringify({ 
-      fileName: fileId, // We don't store original filename, so use fileId
+      fileName,
       presignedUrl 
     }), {
       status: 200,

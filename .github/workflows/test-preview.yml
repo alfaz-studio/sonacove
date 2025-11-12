@@ -47,10 +47,11 @@ jobs:
       - name: Run tests against preview
         run: |
           echo "🧪 Running all tests against: ${{ inputs.preview-url }}"
-          TEST_API_ENDPOINT="${{ inputs.preview-url }}" bun test
+          bun --env-file=.env.test test
         working-directory: ${{ inputs.working-directory }}
         env:
           NODE_ENV: test
+          TEST_API_ENDPOINT: ${{ inputs.preview-url }}
 
       - name: Comment test results on PR
         if: always()

@@ -115,6 +115,11 @@ export async function uploadFile(
       Key: key,
       Body: buffer,
       ContentType: fileBlob.type || metadata.fileType || "application/octet-stream",
+      // Store original filename in metadata for retrieval during download
+      Metadata: {
+        ...(metadata.fileName && { 'original-filename': metadata.fileName }),
+        ...(metadata.fileType && { 'original-filetype': metadata.fileType }),
+      },
     }));
 
     logger.info({ key }, "File uploaded successfully");
@@ -136,39 +141,42 @@ export async function uploadFile(
  * @param sessionId - The meeting session ID
  * @param fileId - The unique file ID
  * @param expiresInHours - URL expiry time in hours (default: 24)
- * @returns Promise<string | null> - Presigned URL or null if file doesn't exist
+ * @returns Promise<{ url: string | null; fileName: string | null }> - Presigned URL and original filename
  */
 export async function generatePresignedUrl(
   sessionId: string,
   fileId: string,
   expiresInHours: number = 24
-): Promise<string | null> {
+): Promise<{ url: string | null; fileName: string | null }> {
   try {
     const s3 = createS3Client();
     const key = `${sessionId}/${fileId}`;
 
     logger.info({ key, expiresInHours }, "Generating presigned URL");
 
-    // Check existence via HeadObject
+    // Check existence and retrieve metadata via HeadObject
+    let fileName: string | null = null;
     try {
-      await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+      const headResponse = await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+      // Retrieve original filename from metadata
+      fileName = headResponse.Metadata?.['original-filename'] || null;
     } catch (err) {
       logger.warn({ key }, "File not found in S3");
-      return null;
+      return { url: null, fileName: null };
     }
 
     const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
     const url = await getSignedUrl(s3, command, { expiresIn: expiresInHours * 60 * 60 });
 
-    logger.info({ key, url }, "Presigned URL generated");
-    return url;
+    logger.info({ key, url, fileName }, "Presigned URL generated");
+    return { url, fileName };
 
   } catch (error) {
     logger.error(error, "Failed to generate presigned URL", {
       sessionId,
       fileId
     });
-    return null;
+    return { url: null, fileName: null };
   }
 }
 
