@@ -12,6 +12,7 @@ import { bookMeeting } from '../../../utils/api.ts';
 import { useAuth } from '../../../hooks/useAuth.ts';
 import { useRoomAvailability } from '../../../hooks/useRoomAvailability.ts';
 import RoomAvailabilityStatus from './RoomAvailabilityStatus.tsx';
+import CopyIcon from '../../../components/CopyIcon.tsx';
 
 interface Props {
   isLoggedIn: boolean;
@@ -27,6 +28,7 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
   const [placeholder, setPlaceholder] = useState('');
   const [isRoomNameInvalid, setIsRoomNameInvalid] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   
   const { getAccessToken } = useAuth()
   const { isChecking, isAvailable, error: availabilityError } = useRoomAvailability(roomName, isRoomNameInvalid);
@@ -129,9 +131,26 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
     }
   };
 
+  const handleCopyClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (isCopied) {
+      return;
+    }
+
+    const finalRoomName = roomName.trim() || placeholder;
+    navigator.clipboard.writeText(finalRoomName).then(() => {
+      setIsCopied(true);
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000); // Reset icon after 2 seconds
+    });
+  };
+
   const finalRoomName = roomName.trim() || placeholder;
 
   const isBookButtonDisabled = (isLoggedIn && isBookingLimitReached) || isBooking;
+
+  const showCopyIcon = !isRoomNameInvalid && !isChecking && isAvailable && !availabilityError;
 
   /**
    * Renders a contextual message below the action buttons based on auth state.
@@ -178,8 +197,23 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
               value={roomName}
               onChange={handleRoomNameChange}
               placeholder='Enter meeting name'
-              className='w-full bg-transparent border-0 border-b border-gray-300 py-3 pl-3 text-2xl sm:text-3xl font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary-500 transition-colors'
+              className='w-full bg-transparent border-0 border-b border-gray-300 py-3 pl-3 pr-12 text-2xl sm:text-3xl font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary-500 transition-colors'
             />
+
+            {showCopyIcon && (
+              <button
+                onClick={handleCopyClick}
+                className='group absolute top-1/2 -translate-y-1/2 right-2 p-2 text-gray-400 hover:text-primary-500 rounded-full transition-colors'
+                aria-label='Copy meeting name'
+                type='button'
+              >
+                <CopyIcon
+                  isCopied={isCopied}
+                  size={20}
+                  className='text-gray-400 group-hover:text-primary-500'
+                />
+              </button>
+            )}
           </div>
 
           <RoomAvailabilityStatus
