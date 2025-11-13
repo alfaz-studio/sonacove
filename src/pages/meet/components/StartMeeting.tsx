@@ -196,6 +196,7 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
               type='text'
               value={roomName}
               onChange={handleRoomNameChange}
+              autoFocus={true}
               placeholder='Enter meeting name'
               className='w-full bg-transparent border-0 border-b border-gray-300 py-3 pl-3 pr-12 text-2xl sm:text-3xl font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary-500 transition-colors'
             />
