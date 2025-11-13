@@ -79,10 +79,10 @@ async function processWebhookEvent(event: PaddleWebhookEvent, runtime: Runtime["
       user = await processSubscriptionUpdate(extractedData, runtime);
       // Subscription activation event
       if (event.event_type === "subscription.created" && user) {
-        await capturePosthogEvent({
-          distinctId: user.id,
-          event: "subscription_activated"
-        });
+        // await capturePosthogEvent({
+        //   distinctId: user.id,
+        //   event: "subscription_activated"
+        // });
       }
     }
     // Handle transaction events for subscription payment
@@ -103,10 +103,10 @@ async function processWebhookEvent(event: PaddleWebhookEvent, runtime: Runtime["
       }
       // Subscription payment event: only fire for successful payments
       if (event.event_type === "transaction.updated" && user && tx.status === "paid") {
-        await capturePosthogEvent({
-          distinctId: user.id,
-          event: "subscription_payment"
-        });
+        // await capturePosthogEvent({
+        //   distinctId: user.id,
+        //   event: "subscription_payment"
+        // });
       }
     }
 
