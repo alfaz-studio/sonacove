@@ -28,7 +28,6 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
   isDeleting,
   onDelete,
 }) => {
-  const [isCopied, setIsCopied] = useState(false);
   const isUpcoming = meeting.status === 'Upcoming';
   const isExpired = meeting.status === 'Expired';
 
@@ -36,23 +35,6 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
     e.preventDefault();
     e.stopPropagation();
     onDelete(meeting);
-  };
-
-  const handleCopyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Prevent re-triggering if already copied and in the timeout period
-    if (isCopied) {
-        return;
-    }
-
-    navigator.clipboard.writeText(meeting.title).then(() => {
-      setIsCopied(true);
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000); // Reset icon after 2 seconds
-    });
   };
 
   /**
@@ -110,13 +92,12 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
         </div>
         <div className='absolute top-4 right-4 flex items-center gap-2 sm:relative sm:top-auto sm:right-auto sm:ml-auto'>
 
-          <button
-            onClick={handleCopyClick}
-            className='relative p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+          <CopyIcon
+            textToCopy={meeting.title}
+            size={18}
+            className='p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
             aria-label={`Copy meeting name ${meeting.title}`}
-          >
-            <CopyIcon isCopied={isCopied} size={18} />
-          </button>
+          />
 
           <button
             onClick={handleDeleteClick}

@@ -28,7 +28,6 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
   const [placeholder, setPlaceholder] = useState('');
   const [isRoomNameInvalid, setIsRoomNameInvalid] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   
   const { getAccessToken } = useAuth()
   const { isChecking, isAvailable, error: availabilityError } = useRoomAvailability(roomName, isRoomNameInvalid);
@@ -131,21 +130,6 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
     }
   };
 
-  const handleCopyClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (isCopied) {
-      return;
-    }
-
-    const finalRoomName = roomName.trim() || placeholder;
-    navigator.clipboard.writeText(finalRoomName).then(() => {
-      setIsCopied(true);
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000); // Reset icon after 2 seconds
-    });
-  };
-
   const finalRoomName = roomName.trim() || placeholder;
 
   const isBookButtonDisabled = (isLoggedIn && isBookingLimitReached) || isBooking;
@@ -202,18 +186,15 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
             />
 
             {showCopyIcon && (
-              <button
-                onClick={handleCopyClick}
-                className='group absolute top-1/2 -translate-y-1/2 right-2 p-2 text-gray-400 hover:text-primary-500 rounded-full transition-colors'
-                aria-label='Copy meeting name'
-                type='button'
-              >
+              <div className='absolute top-1/2 -translate-y-1/2 right-2'>
                 <CopyIcon
-                  isCopied={isCopied}
+                  textToCopy={finalRoomName}
                   size={20}
-                  className='text-gray-400 group-hover:text-primary-500'
+                  className='group p-2 text-gray-400 hover:text-primary-500 rounded-full transition-colors'
+                  aria-label='Copy meeting name'
+                  type='button'
                 />
-              </button>
+              </div>
             )}
           </div>
 
