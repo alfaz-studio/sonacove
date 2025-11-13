@@ -10,7 +10,7 @@ interface OnboardingSuccessViewProps {
 
 const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onOpenCheckout }) => {
   const isTrialing =
-    user.profile.context?.user?.subscription_status !== 'active';
+    (user.profile.context as any)?.user?.subscription_status !== 'active';
   const firstName = user.profile.name?.split(' ')[0] ?? 'there';
 
   return (

@@ -11,6 +11,10 @@ permissions:
   pull-requests: write
 
 jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/check.yml
+
   deploy:
     name: Cloudflare
     runs-on: ubuntu-latest
@@ -18,6 +22,8 @@ jobs:
     concurrency:
       group: deploy-${{ github.ref }}
       cancel-in-progress: true
+    outputs:
+      preview-url: ${{ steps.upload.outputs.deployment-url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,3 +156,11 @@ jobs:
 
             ---
             *This comment will be automatically updated when new commits are pushed.*
+
+  test:
+    if: github.event_name == 'pull_request'
+    needs: deploy
+    uses: ./.github/workflows/test-preview.yml
+    with:
+      preview-url: ${{ needs.deploy.outputs.preview-url }}
+    secrets: inherit

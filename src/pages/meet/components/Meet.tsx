@@ -36,7 +36,7 @@ export default function Meet() {
       setAppUser({
         name: name ?? 'User',
         email: email ?? '',
-        plan: context?.user?.subscription_status ?? 'trialing',
+        plan: (context as any)?.user?.subscription_status ?? 'trialing',
         avatarUrl: picture ?? getGravatarUrl(email || '', 200),
         minutesUsed: minutesUsed,
         token: oidcUser.access_token,

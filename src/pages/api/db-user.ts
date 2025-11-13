@@ -310,7 +310,7 @@ const DeleteWorkerHandler: APIRoute = async ({ request, locals }) => {
           }
         );
       } else {
-        logger.warn(`Partial deletion completed for user: ${email}`, deletionResults);
+        logger.warn(deletionResults, `Partial deletion completed for user: ${email}`);
         return new Response(
           JSON.stringify({
             message: "User deletion partially completed",
