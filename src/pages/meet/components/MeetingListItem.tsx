@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CircleCheck,
   History,
   Loader2,
   Trash2,
-  AlertTriangle,
+  AlertTriangle
 } from 'lucide-react';
 import type { Meeting } from '../types';
+import CopyIcon from '../../../components/CopyIcon';
 
 /**
  * Props for the MeetingListItem component.
@@ -64,6 +65,8 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
     );
   };
 
+  const fullMeetingUrl = `${window.location.origin}/meet/${meeting.title}`;
+
   return (
     <a href={`/meet/${meeting.title}`}>
       <div
@@ -89,19 +92,28 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
 
           {renderStatusBadge()}
         </div>
+        <div className='absolute top-4 right-4 flex items-center gap-2 sm:relative sm:top-auto sm:right-auto sm:ml-auto'>
 
-        <button
-          onClick={handleDeleteClick}
-          className='absolute top-4 right-0 sm:relative sm:top-auto sm:right-auto sm:ml-auto p-2 pr-4 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-          aria-label={`Delete meeting ${meeting.title}`}
-          disabled={isDeleting}
-        >
-          {isDeleting ? (
-            <Loader2 size={18} className='animate-spin' />
-          ) : (
-            <Trash2 size={18} />
-          )}
-        </button>
+          <CopyIcon
+            textToCopy={fullMeetingUrl}
+            size={18}
+            className='p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
+            aria-label={`Copy meeting name ${meeting.title}`}
+          />
+
+          <button
+            onClick={handleDeleteClick}
+            className='p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+            aria-label={`Delete meeting ${meeting.title}`}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 size={18} className='animate-spin' />
+            ) : (
+              <Trash2 size={18} />
+            )}
+          </button>
+        </div>
       </div>
     </a>
   );

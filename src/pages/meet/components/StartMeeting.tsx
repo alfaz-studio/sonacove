@@ -12,6 +12,7 @@ import { bookMeeting } from '../../../utils/api.ts';
 import { useAuth } from '../../../hooks/useAuth.ts';
 import { useRoomAvailability } from '../../../hooks/useRoomAvailability.ts';
 import RoomAvailabilityStatus from './RoomAvailabilityStatus.tsx';
+import CopyIcon from '../../../components/CopyIcon.tsx';
 
 interface Props {
   isLoggedIn: boolean;
@@ -130,8 +131,11 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
   };
 
   const finalRoomName = roomName.trim() || placeholder;
+  const fullMeetingUrl = `${window.location.origin}/meet/${finalRoomName}`;
 
   const isBookButtonDisabled = (isLoggedIn && isBookingLimitReached) || isBooking;
+
+  const showCopyIcon = !isRoomNameInvalid && !isChecking && isAvailable && !availabilityError;
 
   /**
    * Renders a contextual message below the action buttons based on auth state.
@@ -177,9 +181,22 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
               type='text'
               value={roomName}
               onChange={handleRoomNameChange}
+              autoFocus={true}
               placeholder='Enter meeting name'
-              className='w-full bg-transparent border-0 border-b border-gray-300 py-3 pl-3 text-2xl sm:text-3xl font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary-500 transition-colors'
+              className='w-full bg-transparent border-0 border-b border-gray-300 py-3 pl-3 pr-12 text-2xl sm:text-3xl font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-primary-500 transition-colors'
             />
+
+            {showCopyIcon && (
+              <div className='absolute top-1/2 -translate-y-1/2 right-2'>
+                <CopyIcon
+                  textToCopy={fullMeetingUrl}
+                  size={20}
+                  className='group p-2 text-gray-400 hover:text-primary-500 rounded-full transition-colors'
+                  aria-label='Copy meeting name'
+                  type='button'
+                />
+              </div>
+            )}
           </div>
 
           <RoomAvailabilityStatus
