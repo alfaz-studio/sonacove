@@ -65,6 +65,8 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
     );
   };
 
+  const fullMeetingUrl = `${window.location.origin}/meet/${meeting.title}`;
+
   return (
     <a href={`/meet/${meeting.title}`}>
       <div
@@ -93,7 +95,7 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({
         <div className='absolute top-4 right-4 flex items-center gap-2 sm:relative sm:top-auto sm:right-auto sm:ml-auto'>
 
           <CopyIcon
-            textToCopy={meeting.title}
+            textToCopy={fullMeetingUrl}
             size={18}
             className='p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors'
             aria-label={`Copy meeting name ${meeting.title}`}

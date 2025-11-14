@@ -131,6 +131,7 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
   };
 
   const finalRoomName = roomName.trim() || placeholder;
+  const fullMeetingUrl = `${window.location.origin}/meet/${finalRoomName}`;
 
   const isBookButtonDisabled = (isLoggedIn && isBookingLimitReached) || isBooking;
 
@@ -188,7 +189,7 @@ const StartMeeting: React.FC<Props> = ({ isLoggedIn, onMeetingBooked, isBookingL
             {showCopyIcon && (
               <div className='absolute top-1/2 -translate-y-1/2 right-2'>
                 <CopyIcon
-                  textToCopy={finalRoomName}
+                  textToCopy={fullMeetingUrl}
                   size={20}
                   className='group p-2 text-gray-400 hover:text-primary-500 rounded-full transition-colors'
                   aria-label='Copy meeting name'
