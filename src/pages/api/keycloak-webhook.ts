@@ -249,10 +249,10 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
       case "access.LOGIN": {
         logger.info('LOGIN event captured')
-        await capturePosthogEvent({
-          distinctId: webhookEvent.authDetails.userId,
-          event: 'user_logged_in'
-        });   
+        // await capturePosthogEvent({
+        //   distinctId: webhookEvent.authDetails.userId,
+        //   event: 'user_logged_in'
+        // });
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { "Content-Type": "application/json" }
@@ -261,10 +261,10 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
       case "access.REGISTER": {
         logger.info('REGISTER event captured')
-        await capturePosthogEvent({
-          distinctId: webhookEvent.authDetails.userId,
-          event: 'user_registered',
-        });
+        // await capturePosthogEvent({
+        //   distinctId: webhookEvent.authDetails.userId,
+        //   event: 'user_registered',
+        // });
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { "Content-Type": "application/json" }

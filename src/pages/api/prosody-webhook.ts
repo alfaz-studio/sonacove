@@ -144,10 +144,10 @@ async function handleHostEvent(eventType: string, room: string, email: string) {
                 totalMinutesToAdd = Math.max(0, durationMinutes); // Ensure non-negative
             }
             // Send event to PostHog with meeting time
-            await capturePosthogEvent({
-                distinctId: `meeting_${room}`,
-                event: 'meeting_host_left',
-            });
+            // await capturePosthogEvent({
+            //     distinctId: `meeting_${room}`,
+            //     event: 'meeting_host_left',
+            // });
 
             // Update user: set inactive, clear session start time, add to total minutes
             await db
