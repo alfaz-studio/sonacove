@@ -56,12 +56,13 @@ export interface FileMetadata {
 }
 
 /**
- * Extracts region from S3-compatible endpoint (e.g., in-maa-1.linodeobjects.com -> in-maa-1).
+ * Extracts region from S3-compatible endpoint (e.g., https://in-maa-1.linodeobjects.com -> in-maa-1).
  * Falls back to us-east-1 if region cannot be determined.
  */
 function extractRegionFromEndpoint(endpoint: string): string {
   // Extract region from Linode/Akamai format: {region}.linodeobjects.com
-  const linodeMatch = endpoint.match(/^([a-z]+-[a-z0-9]+)\.linodeobjects\.com/);
+  // Handle both with and without https:// prefix
+  const linodeMatch = endpoint.match(/(?:https?:\/\/)?([a-z]+-[a-z0-9]+)\.linodeobjects\.com/);
   if (linodeMatch) {
     return linodeMatch[1];
   }
