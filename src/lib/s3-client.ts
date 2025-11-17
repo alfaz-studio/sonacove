@@ -4,6 +4,26 @@ import { getLogger } from "./modules/pino-logger";
 import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
 import { DOMParser as XmldomDOMParser } from "@xmldom/xmldom";
 
+// Polyfill Node constants for Cloudflare Workers (@xmldom/xmldom requires these)
+// These are DOM node type constants used by xmldom for XML parsing
+if (typeof globalThis.Node === "undefined") {
+  // @ts-ignore - Node constants needed by xmldom
+  globalThis.Node = {
+    ELEMENT_NODE: 1,
+    ATTRIBUTE_NODE: 2,
+    TEXT_NODE: 3,
+    CDATA_SECTION_NODE: 4,
+    ENTITY_REFERENCE_NODE: 5,
+    ENTITY_NODE: 6,
+    PROCESSING_INSTRUCTION_NODE: 7,
+    COMMENT_NODE: 8,
+    DOCUMENT_NODE: 9,
+    DOCUMENT_TYPE_NODE: 10,
+    DOCUMENT_FRAGMENT_NODE: 11,
+    NOTATION_NODE: 12,
+  };
+}
+
 // Polyfill DOMParser for Cloudflare Workers (AWS SDK requires it for XML error parsing)
 // The AWS SDK uses DOMParser to parse XML error responses from S3
 if (typeof globalThis.DOMParser === "undefined") {
