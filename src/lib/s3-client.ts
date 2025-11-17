@@ -2,6 +2,14 @@ import { S3Client, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, Get
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getLogger } from "./modules/pino-logger";
 import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
+import { DOMParser as XmldomDOMParser } from "@xmldom/xmldom";
+
+// Polyfill DOMParser for Cloudflare Workers (AWS SDK requires it for XML error parsing)
+// The AWS SDK uses DOMParser to parse XML error responses from S3
+if (typeof globalThis.DOMParser === "undefined") {
+  // @ts-ignore - DOMParser from xmldom has a slightly different interface but is compatible
+  globalThis.DOMParser = XmldomDOMParser;
+}
 
 const logger = getLogger();
 
@@ -125,12 +133,36 @@ export async function uploadFile(
     logger.info({ key }, "File uploaded successfully");
     return true;
 
-  } catch (error) {
-    logger.error(error, "Failed to upload file to S3", {
+  } catch (error: any) {
+    // Extract detailed error information from AWS SDK errors
+    const errorDetails: any = {
       sessionId,
       fileId,
-      size: fileBlob.size
-    });
+      size: fileBlob.size,
+      fileName: metadata.fileName,
+    };
+
+    // Try to extract HTTP status code and error message
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    // Log the full error object for debugging
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to upload file to S3");
+
     return false;
   }
 }
@@ -171,11 +203,30 @@ export async function generatePresignedUrl(
     logger.info({ key, url, fileName }, "Presigned URL generated");
     return { url, fileName };
 
-  } catch (error) {
-    logger.error(error, "Failed to generate presigned URL", {
+  } catch (error: any) {
+    const errorDetails: any = {
       sessionId,
-      fileId
-    });
+      fileId,
+    };
+
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to generate presigned URL");
     return { url: null, fileName: null };
   }
 }
@@ -199,11 +250,30 @@ export async function deleteFile(sessionId: string, fileId: string): Promise<boo
     logger.info({ key }, "File deleted successfully");
     return true;
 
-  } catch (error) {
-    logger.error(error, "Failed to delete file from S3", {
+  } catch (error: any) {
+    const errorDetails: any = {
       sessionId,
-      fileId
-    });
+      fileId,
+    };
+
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to delete file from S3");
     return false;
   }
 }
