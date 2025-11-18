@@ -1,7 +1,7 @@
 import { S3Client, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getLogger } from "./modules/pino-logger";
-import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
+import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT, S3_REGION } from "astro:env/server";
 import { DOMParser as XmldomDOMParser } from "@xmldom/xmldom";
 
 // Polyfill Node constants for Cloudflare Workers (@xmldom/xmldom requires these)
@@ -58,11 +58,13 @@ export interface FileMetadata {
 /**
  * Extracts region from S3-compatible endpoint (e.g., https://in-maa-1.linodeobjects.com -> in-maa-1).
  * Falls back to us-east-1 if region cannot be determined.
+ * This is only used as a fallback if S3_REGION is not provided.
  */
 function extractRegionFromEndpoint(endpoint: string): string {
   // Extract region from Linode/Akamai format: {region}.linodeobjects.com
   // Handle both with and without https:// prefix
-  const linodeMatch = endpoint.match(/(?:https?:\/\/)?([a-z]+-[a-z0-9]+)\.linodeobjects\.com/);
+  // Match pattern like: in-maa-1, us-east-1, etc. (can have multiple dashes)
+  const linodeMatch = endpoint.match(/(?:https?:\/\/)?([a-z0-9-]+)\.linodeobjects\.com/);
   if (linodeMatch) {
     return linodeMatch[1];
   }
@@ -89,7 +91,8 @@ export function createS3Client(): S3Client {
     endpoint: S3_ENDPOINT,
   };
 
-  const region = extractRegionFromEndpoint(config.endpoint);
+  // Use S3_REGION if provided, otherwise try to extract from endpoint
+  const region = S3_REGION || extractRegionFromEndpoint(config.endpoint);
 
   logger.info({
     bucket: config.bucket,
