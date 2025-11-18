@@ -137,15 +137,17 @@ export async function uploadFile(
       fileName: metadata.fileName
     }, "Uploading file to S3");
 
-    // Convert Blob to Buffer for S3 upload
-    // The AWS SDK needs a Buffer/ArrayBuffer, not a Blob stream
+    // Convert Blob to Uint8Array for S3 upload
+    // The AWS SDK accepts ArrayBuffer/Uint8Array directly (works in Cloudflare Workers)
+    // Using Uint8Array instead of Buffer for better compatibility
     const arrayBuffer = await fileBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const uint8Array = new Uint8Array(arrayBuffer);
 
     await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
-      Body: buffer,
+      Body: uint8Array,
+      ContentLength: uint8Array.length,
       ContentType: fileBlob.type || metadata.fileType || "application/octet-stream",
       // Store original filename in metadata for retrieval during download
       Metadata: {
