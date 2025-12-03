@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import '../../styles/globals.css';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Sonacove Dashboard Demo" description="A demo of the upcoming organizational dashboard features.">
+  <DashboardLayout client:only="react" />
+</BaseLayout>
+
