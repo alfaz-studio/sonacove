@@ -1,0 +1,173 @@
+---
+import PostHog from "../components/posthog.astro";
+import { Font } from 'astro:assets';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  url?: string;
+  type?: string;
+}
+
+const {
+  title,
+  description = "Fast, simple, and secure online meetings with a focus on ethics and privacy.",
+  image = "https://sonacove.com/hotlink-ok/og-image.png",
+  url = "https://sonacove.com",
+  type = "website",
+} = Astro.props;
+
+// Ensure image URL is absolute and accessible
+const socialImage = image.startsWith('http') ? image : new URL(image, url).toString();
+
+// Generate canonical URL
+const canonicalUrl = new URL(url + Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Sonacove" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sonacove Meets - Secure online meetings" />
+    <meta property="og:site_name" content="Sonacove Meets" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="sonacove.com" />
+    <meta property="twitter:url" content={canonicalUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="Sonacove Meets - Secure online meetings" />
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="keywords" content="online meetings, video conferencing, secure meetings, privacy, ethics, education, teaching, learning" />
+    <meta name="theme-color" content="#F9FAFB" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Sonacove Meets" />
+
+    <title>{title}</title>
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Sonacove Meets",
+      "description": description,
+      "url": canonicalUrl.toString(),
+      "applicationCategory": "CommunicationApplication",
+      "operatingSystem": "Web Browser",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free Plan",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Basic video conferencing for anyone"
+        },
+        {
+          "@type": "Offer", 
+          "name": "Premium Plan",
+          "price": "8.99",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "RecurringPayChargeSpecification",
+            "billingDuration": "P1M",
+            "billingIncrement": 1
+          },
+          "description": "Advanced features and priority support"
+        }
+      ],
+      "creator": {
+        "@type": "Organization",
+        "name": "Sonacove",
+        "url": "https://sonacove.com"
+      },
+      "image": socialImage,
+      "screenshot": socialImage,
+      "softwareRequirements": "Web Browser with WebRTC support",
+      "audience": {
+        "@type": "Audience",
+        "audienceType": ["Students", "Teachers", "Businesses"]
+      },
+      "featureList": [
+        "Video Conferencing",
+        "Screen Sharing", 
+        "Secure Meetings",
+        "Privacy Focused",
+        "Ethical Technology"
+      ]
+    })}></script>
+
+    <!-- Load and preload fonts -->
+    <Font cssVariable="--font-crimson-pro" preload />
+    <!-- <Font cssVariable="--font-lora"/> --> <!--Commented for now as it's not being used anywhere -->
+
+    <PostHog />
+  </head>
+  <body class="min-h-screen bg-[#F9FAFB] flex flex-col font-crimson cursor-custom">
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  html {
+    scroll-behavior: smooth;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background-color: #f7f7f7;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: #d1d1d1;
+    border-radius: 10px;
+    border: 2px solid #f7f7f7;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #b3b3b3;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d1d1 #f7f7f7;
+  }
+
+  @keyframes autoscroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-autoscroll {
+    /* You can adjust the duration (80s) to make the scroll faster or slower */
+    animation: autoscroll 70s linear infinite;
+  }
+</style>
