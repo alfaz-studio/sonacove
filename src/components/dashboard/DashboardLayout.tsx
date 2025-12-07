@@ -7,6 +7,8 @@ import {
   Settings, 
   Code, 
   LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
@@ -29,7 +31,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
+  useSidebar,
 } from '../ui/sidebar';
 import OverviewView from './OverviewView';
 import MeetingsView from './MeetingsView';
@@ -43,6 +45,26 @@ import { usePopup } from '../../hooks/usePopup';
 interface DashboardLayoutProps {}
 
 type View = 'overview' | 'meetings' | 'users' | 'developer' | 'settings';
+
+// Renders an arrow that flips direction based on sidebar state
+const CustomSidebarTrigger = () => {
+  const { toggleSidebar, state } = useSidebar();
+  
+  return (
+    <button
+      onClick={toggleSidebar}
+      className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-gray-100 hover:text-gray-900 h-7 w-7"
+      title="Toggle Sidebar"
+    >
+      {state === 'expanded' ? (
+        <ChevronLeft className="h-5 w-5" />
+      ) : (
+        <ChevronRight className="h-5 w-5" />
+      )}
+      <span className="sr-only">Toggle Sidebar</span>
+    </button>
+  );
+};
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
   // Demo State: Role Switcher - Select demo personas from actual users
@@ -87,17 +109,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         onClose={hidePopup}
       />
       <SidebarProvider defaultOpen={true}>
-      <Sidebar collapsible="none" className="border-r">
+      <Sidebar collapsible="icon" className="border-r">      
         {/* Logo Header */}
-        <SidebarHeader className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <img src={SonacoveLogo.src} alt="Sonacove" className="h-8 w-8" />
-            <span className="text-xl font-bold text-primary font-crimson">Sonacove</span>
-          </div>
-        </SidebarHeader>
+        <SidebarHeader className="p-4 border-b border-sidebar-border h-16 flex justify-center">
+          <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
+              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden overflow-hidden transition-all duration-300">
+                <img src={SonacoveLogo.src} alt="Sonacove" className="h-8 w-8 shrink-0" />
+                <span className="text-xl font-bold text-primary font-crimson whitespace-nowrap">
+                  Sonacove
+                </span>
+              </div>
+              <div className="flex shrink-0">
+                <CustomSidebarTrigger />
+              </div>
+            </div>
+          </SidebarHeader>
 
         {/* Main Navigation */}
-        <SidebarContent className="flex flex-col overflow-hidden">
+      <SidebarContent className="flex flex-col h-full group-data-[collapsible=icon]:hidden">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -142,7 +171,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         </SidebarContent>
 
         {/* User Profile / Role Switcher Footer */}
-        <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
@@ -168,7 +197,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                   sideOffset={4}
                 >
                   <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Switch Demo Persona
+                    Switch Demo Personal
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {demoPersonas.map((u) => (
@@ -205,7 +234,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
       {/* Main Content */}
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
-          <SidebarTrigger className="-ml-1 md:hidden" />
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">
               Merhaba, {activeUser.name.split(' ')[0]}
