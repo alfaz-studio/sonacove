@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table"
 import { Pagination } from "../meetings/Pagination"
 import type { User } from "@/data/mock-dashboard"
+import { cn } from "@/components/lib/utils"
 
 interface UserDataTableProps {
   columns: ColumnDef<User, unknown>[]
@@ -88,11 +89,11 @@ export function UserDataTable({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-lg border border-accent-200 shadow-sm bg-white">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-50/50">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent border-accent-200">
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
@@ -112,6 +113,11 @@ export function UserDataTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className={cn(
+                    "cursor-pointer transition-colors border-accent-100",
+                    "hover:bg-accent-50",
+                    "data-[state=selected]:bg-primary-50"
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -142,4 +148,3 @@ export function UserDataTable({
     </div>
   )
 }
-

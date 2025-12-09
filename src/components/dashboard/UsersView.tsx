@@ -153,7 +153,7 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
             Manage users, roles, and access permissions.
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setIsAddUserOpen(true)}>
+        <Button className="gap-2 bg-primary-500 text-white hover:bg-primary-600" onClick={() => setIsAddUserOpen(true)}>
           <Plus className="h-4 w-4" /> Add User
         </Button>
       </div>
@@ -258,14 +258,14 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
+            <Button className="bg-gray-100 text-black border border-gray-200 hover:bg-gray-200" variant="outline" onClick={() => {
               setIsAddUserOpen(false);
               setNewUserEmail('');
               setEmailError(null);
             }}>
               Cancel
             </Button>
-            <Button onClick={handleAddUser}>Send Invitation</Button>
+            <Button className="bg-primary-500 text-white hover:bg-primary-600" onClick={handleAddUser}>Send Invitation</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
