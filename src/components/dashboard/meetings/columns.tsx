@@ -36,6 +36,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
         }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
+        className="data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500 data-[state=checked]:text-white border-accent-300 focus-visible:ring-primary-500"
       />
     ),
     cell: ({ row }) => (
@@ -44,6 +45,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
         onClick={(e) => e.stopPropagation()}
+        className="data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500 data-[state=checked]:text-white border-accent-300 focus-visible:ring-primary-500"
       />
     ),
     enableSorting: false,

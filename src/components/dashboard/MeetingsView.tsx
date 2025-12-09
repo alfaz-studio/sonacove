@@ -311,7 +311,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
   const chartConfig = {
     participants: {
       label: "Participants",
-      color: "hsl(var(--primary))",
+      color: "#f05023",
     },
   };
 
@@ -321,13 +321,13 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       <div className="space-y-6">
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Meetings</CardTitle>
               <Video className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.totalMeetings}</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics.totalMeetings}</div>
               <p className="text-xs text-muted-foreground">
                 {dateRange?.from && dateRange?.to
                   ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
@@ -335,13 +335,13 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Minutes</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.totalMinutes.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics.totalMinutes.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
                 {dateRange?.from && dateRange?.to
                   ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
@@ -349,25 +349,25 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg. Participants</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.avgParticipants}</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics.avgParticipants}</div>
               <p className="text-xs text-muted-foreground">
                 Per meeting average
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
               <HardDrive className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics.totalStorageGB.toFixed(2)} GB</div>
+              <div className="text-2xl font-bold text-gray-900">{analytics.totalStorageGB.toFixed(2)} GB</div>
               <p className="text-xs text-muted-foreground">
                 From recordings
               </p>
@@ -376,15 +376,15 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
         </div>
 
         {/* Chart */}
-        <Card>
+        <Card className="bg-white shadow-sm border-accent-200">
           <CardHeader>
-            <CardTitle>Meeting Activity</CardTitle>
+            <CardTitle className="text-gray-900">Meeting Activity</CardTitle>
             <CardDescription>Total participants per day over the selected time period.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
               <LineChart accessibilityLayer data={analytics.chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6e6e6" />
                 <XAxis
                   dataKey="displayDate"
                   tickLine={false}
@@ -393,21 +393,23 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  tick={{ fill: '#666666' }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
                   width={50}
+                  tick={{ fill: '#666666' }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
                   dataKey="participants"
-                  stroke="var(--color-participants)"
+                  stroke="#f05023"
                   strokeWidth={2}
                   dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  activeDot={{ r: 6, fill: "#f05023" }}
                 />
               </LineChart>
             </ChartContainer>
@@ -418,7 +420,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       {/* Meetings Table Section */}
       <div className="space-y-4">
       {/* Filter Bar */}
-      <div className="flex flex-col gap-4 bg-background p-4 rounded-lg border">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-lg border border-accent-200 shadow-sm">
         {/* Top row: Search and primary actions */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           {/* Search Input */}
@@ -463,7 +465,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
               value={participantSizeFilter}
               onValueChange={(value) => setParticipantSizeFilter(value === 'all' ? '' : value)}
             >
-              <SelectTrigger id="participant-size" className="w-[100px] h-9">
+              <SelectTrigger id="participant-size" className="w-[100px] h-9 focus:ring-primary-500">
                 <SelectValue placeholder="Any" />
               </SelectTrigger>
               <SelectContent>
@@ -483,6 +485,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
               id="ongoing"
               checked={ongoingFilter}
               onCheckedChange={(checked) => setOngoingFilter(checked === true)}
+              className="border-accent-300 data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500 focus-visible:ring-primary-500"
             />
             <Label
               htmlFor="ongoing"
@@ -498,6 +501,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
               id="is-host"
               checked={isHostFilter}
               onCheckedChange={(checked) => setIsHostFilter(checked === true)}
+              className="border-accent-300 data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500 focus-visible:ring-primary-500"
             />
             <Label
               htmlFor="is-host"
@@ -510,7 +514,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
           {/* Active filters indicator */}
           {activeFilterCount > 0 && (
             <div className="flex items-center gap-2 ml-auto">
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="secondary" className="gap-1 bg-primary-50 text-primary-700 hover:bg-primary-100">
                 <Filter className="h-3 w-3" />
                 {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
               </Badge>
@@ -518,7 +522,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
                 variant="ghost"
                 size="sm"
                 onClick={clearAllFilters}
-                className="h-7 text-xs"
+                className="h-7 text-xs hover:text-primary-600 hover:bg-primary-50"
               >
                 Clear all
               </Button>

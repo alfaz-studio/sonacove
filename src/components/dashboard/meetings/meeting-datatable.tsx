@@ -192,11 +192,11 @@ export function DataTable({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-lg border border-accent-200 shadow-sm bg-white">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent border-accent-200">
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
@@ -219,8 +219,10 @@ export function DataTable({
                   <TableRow
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
-                      "cursor-pointer transition-colors",
-                      row.getIsExpanded() && "bg-muted/50"
+                      "cursor-pointer transition-colors border-accent-100",
+                      "hover:bg-accent-50",
+                      "data-[state=selected]:bg-primary-50",
+                      row.getIsExpanded() && "bg-accent-50/50 border-b-0"
                     )}
                     onClick={() => row.toggleExpanded()}
                   >
@@ -235,7 +237,7 @@ export function DataTable({
                     {/* Expand toggle cell */}
                     <TableCell className="w-[40px]">
                       {row.getIsExpanded() ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        <ChevronUp className="h-4 w-4 text-primary-500" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -244,12 +246,12 @@ export function DataTable({
                   
                   {/* Expanded row details */}
                   {row.getIsExpanded() && (
-                    <TableRow className="hover:bg-transparent border-0">
+                    <TableRow className="hover:bg-transparent border-0 bg-accent-50/30">
                       <TableCell 
                         colSpan={columns.length + 1} 
                         className="p-0 border-0"
                       >
-                        <div className="border-t border-border/50 mx-4">
+                        <div className="border-t border-accent-200 mx-4">
                           <MeetingDetails meeting={row.original} />
                         </div>
                       </TableCell>

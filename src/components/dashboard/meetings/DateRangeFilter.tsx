@@ -200,9 +200,13 @@ export function DateRangeFilter({
             {presets.map((preset) => (
               <Button
                 key={preset.value}
-                variant={selectedPreset === preset.value ? "secondary" : "ghost"}
+                // CHANGED: Use ghost variant but override styles for selected state using cn()
+                variant="ghost"
                 size="sm"
-                className="w-full justify-start text-sm"
+                className={cn(
+                  "w-full justify-start text-sm hover:bg-primary-50 hover:text-primary-700", // Hover effect
+                  selectedPreset === preset.value && "bg-primary-50 text-primary-700 font-medium" // Selected state
+                )}
                 onClick={() => handlePresetSelect(preset.value)}
               >
                 {preset.label}
@@ -237,7 +241,7 @@ export function DateRangeFilter({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-[120px] h-8"
+                  className="w-[120px] h-8 focus-visible:ring-primary-500" // Added focus ring
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -249,7 +253,7 @@ export function DateRangeFilter({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-[120px] h-8"
+                  className="w-[120px] h-8 focus-visible:ring-primary-500" // Added focus ring
                 />
               </div>
             </div>
@@ -261,7 +265,7 @@ export function DateRangeFilter({
               <Button variant="outline" size="sm" onClick={handleClear}>
                 Clear
               </Button>
-              <Button size="sm" onClick={handleApply}>
+              <Button className="bg-primary-500 text-white hover:bg-primary-600" size="sm" onClick={handleApply}>
                 Apply
               </Button>
             </div>
@@ -271,4 +275,3 @@ export function DateRangeFilter({
     </Popover>
   )
 }
-
