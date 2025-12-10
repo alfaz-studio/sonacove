@@ -8,7 +8,6 @@ import {
   Trash2, 
   Clock,
   Loader2,
-  ExternalLink
 } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -24,23 +23,20 @@ import { formatDurationMs } from '@/components/lib/utils';
 import CopyIcon from '@/components/CopyIcon';
 
 const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past' }) => {
-  
   if (status === 'Past') return;
 
   const styles = {
     Upcoming: "bg-green-100 text-green-800 border-green-200",
     Expired: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    Past: "bg-gray-100 text-gray-700 border-gray-200",
   };
 
   const icons = {
     Upcoming: <CircleCheck className="w-3 h-3" />,
     Expired: <AlertTriangle className="w-3 h-3" />,
-    Past: <History className="w-3 h-3" />,
   };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${styles[status]}`}>
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 mr-3 rounded-full border ${styles[status]}`}>
       {icons[status]}
       {status}
     </span>
@@ -94,16 +90,22 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
       {/* Info Section */}
       <div className="flex-1 min-w-0 w-full mb-2 sm:mb-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4 className="text-base font-bold text-gray-900 truncate" title={meeting.title}>
+          <h4 className="text-base font-bold text-gray-900 truncate overflow-hidden max-w-full" title={meeting.title}>
             {meeting.title}
           </h4>
           <div className="hidden sm:block">
             <MeetingStatusBadge status={status} />
           </div>
         </div>
-        <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-          <Clock className="h-3 w-3" /> Duration: {formatDurationMs(Number(meeting.duration))}
-        </p>
+        {status === 'Past' ? (
+          <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Duration: {formatDurationMs(Number(meeting.duration))}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500 truncate flex items-center gap-1 invisible">
+            <Clock className="h-3 w-3" /> Duration: 00:00
+          </p>
+        )}
       </div>
 
       {/*  Actions Section */}
@@ -146,7 +148,7 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
         <Button 
           size="sm" 
           asChild 
-          className="ml-auto sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-8 text-xs font-semibold cursor-pointer shadow-none px-4"
+          className="ml-auto mr-4 sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-8 text-xs font-semibold cursor-pointer shadow-none px-4"
         >
           <a href={meetingUrl} className="flex items-center gap-2">
             Join

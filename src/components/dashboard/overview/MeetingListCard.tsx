@@ -61,7 +61,7 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
         <CardDescription>Manage your scheduled and past sessions.</CardDescription>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0">
+      <CardContent className="flex-1 min-h-0 pr-3">
         {!isLoggedIn ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4 min-h-[400px]">
             <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -91,7 +91,7 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
 
             <div className="flex-1 relative min-h-[400px]">
               <TabsContent value="upcoming" className="absolute inset-0 m-0">
-                <ScrollArea className="h-full pr-4">
+                <ScrollArea className="h-full">
                   {upcoming.length > 0 ? (
                     <div className="space-y-3 pb-4">
                       {upcoming.map((meeting) => (
@@ -105,7 +105,7 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
               </TabsContent>
 
               <TabsContent value="past" className="absolute inset-0 m-0">
-                <ScrollArea className="h-full pr-4">
+                <ScrollArea className="h-full">
                   {past.length > 0 ? (
                     <div className="space-y-3 pb-4">
                       {past.map((meeting) => (
