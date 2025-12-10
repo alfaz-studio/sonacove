@@ -59,6 +59,7 @@ const schema: EnvSchema = {
     S3_ACCESS_KEY_ID: privateString,
     S3_BUCKET: privateString,
     S3_ENDPOINT: privateString,
+    S3_REGION: privateString,
     S3_SECRET_ACCESS_KEY: privateString,
 }
 

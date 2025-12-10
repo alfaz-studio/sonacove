@@ -11,7 +11,7 @@ export default defineConfig({
     user: process.env.DB_USER || "cf",
     password: process.env.DB_PASSWORD || "pass123",
     database: process.env.DB_NAME || "keycloak",
-    ssl: true, // can be boolean | "require" | "allow" | "prefer" | "verify-full" | options from node:tls
+    ssl: false, // can be boolean | "require" | "allow" | "prefer" | "verify-full" | options from node:tls
   },
   migrations: {
     // this is used to store drizzle metadata, DO NOT CHANGE

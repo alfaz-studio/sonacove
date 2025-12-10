@@ -37,6 +37,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
+    "@xmldom/xmldom": "^0.8.11",
     "astro": "^5.14.1",
     "blueimp-md5": "^2.19.0",
     "class-variance-authority": "^0.7.1",

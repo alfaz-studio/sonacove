@@ -1,7 +1,35 @@
 import { S3Client, DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getLogger } from "./modules/pino-logger";
-import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT } from "astro:env/server";
+import { S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET, S3_ENDPOINT, S3_REGION } from "astro:env/server";
+import { DOMParser as XmldomDOMParser } from "@xmldom/xmldom";
+
+// Polyfill Node constants for Cloudflare Workers (@xmldom/xmldom requires these)
+// These are DOM node type constants used by xmldom for XML parsing
+if (typeof globalThis.Node === "undefined") {
+  // @ts-ignore - Node constants needed by xmldom
+  globalThis.Node = {
+    ELEMENT_NODE: 1,
+    ATTRIBUTE_NODE: 2,
+    TEXT_NODE: 3,
+    CDATA_SECTION_NODE: 4,
+    ENTITY_REFERENCE_NODE: 5,
+    ENTITY_NODE: 6,
+    PROCESSING_INSTRUCTION_NODE: 7,
+    COMMENT_NODE: 8,
+    DOCUMENT_NODE: 9,
+    DOCUMENT_TYPE_NODE: 10,
+    DOCUMENT_FRAGMENT_NODE: 11,
+    NOTATION_NODE: 12,
+  };
+}
+
+// Polyfill DOMParser for Cloudflare Workers (AWS SDK requires it for XML error parsing)
+// The AWS SDK uses DOMParser to parse XML error responses from S3
+if (typeof globalThis.DOMParser === "undefined") {
+  // @ts-ignore - DOMParser from xmldom has a slightly different interface but is compatible
+  globalThis.DOMParser = XmldomDOMParser;
+}
 
 const logger = getLogger();
 
@@ -28,12 +56,14 @@ export interface FileMetadata {
 }
 
 /**
- * Extracts region from S3-compatible endpoint (e.g., in-maa-1.linodeobjects.com -> in-maa-1).
- * Falls back to us-east-1 if region cannot be determined.
+ * Extracts region from S3-compatible endpoint (e.g., https://in-maa-1.linodeobjects.com -> in-maa-1).
+ * Returns null when region cannot be determined (caller applies fallback).
  */
-function extractRegionFromEndpoint(endpoint: string): string {
+function extractRegionFromEndpoint(endpoint: string): string | null {
   // Extract region from Linode/Akamai format: {region}.linodeobjects.com
-  const linodeMatch = endpoint.match(/^([a-z]+-[a-z0-9]+)\.linodeobjects\.com/);
+  // Handle both with and without https:// prefix
+  // Match pattern like: in-maa-1, us-east-1, etc. (can have multiple dashes)
+  const linodeMatch = endpoint.match(/(?:https?:\/\/)?([a-z0-9-]+)\.linodeobjects\.com/);
   if (linodeMatch) {
     return linodeMatch[1];
   }
@@ -44,8 +74,8 @@ function extractRegionFromEndpoint(endpoint: string): string {
     return awsMatch[1];
   }
 
-  // Default fallback for S3-compatible storage
-  return "us-east-1";
+  // Unable to parse a region
+  return null;
 }
 
 /**
@@ -60,7 +90,9 @@ export function createS3Client(): S3Client {
     endpoint: S3_ENDPOINT,
   };
 
-  const region = extractRegionFromEndpoint(config.endpoint);
+  // Prefer parsing from endpoint (good for per-endpoint regions); fall back to env; then default
+  const parsedRegion = extractRegionFromEndpoint(config.endpoint);
+  const region = parsedRegion || S3_REGION || "us-east-1";
 
   logger.info({
     bucket: config.bucket,
@@ -105,15 +137,17 @@ export async function uploadFile(
       fileName: metadata.fileName
     }, "Uploading file to S3");
 
-    // Convert Blob to Buffer for S3 upload
-    // The AWS SDK needs a Buffer/ArrayBuffer, not a Blob stream
+    // Convert Blob to Uint8Array for S3 upload
+    // The AWS SDK accepts ArrayBuffer/Uint8Array directly (works in Cloudflare Workers)
+    // Using Uint8Array instead of Buffer for better compatibility
     const arrayBuffer = await fileBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const uint8Array = new Uint8Array(arrayBuffer);
 
     await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
-      Body: buffer,
+      Body: uint8Array,
+      ContentLength: uint8Array.length,
       ContentType: fileBlob.type || metadata.fileType || "application/octet-stream",
       // Store original filename in metadata for retrieval during download
       Metadata: {
@@ -125,12 +159,36 @@ export async function uploadFile(
     logger.info({ key }, "File uploaded successfully");
     return true;
 
-  } catch (error) {
-    logger.error(error, "Failed to upload file to S3", {
+  } catch (error: any) {
+    // Extract detailed error information from AWS SDK errors
+    const errorDetails: any = {
       sessionId,
       fileId,
-      size: fileBlob.size
-    });
+      size: fileBlob.size,
+      fileName: metadata.fileName,
+    };
+
+    // Try to extract HTTP status code and error message
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    // Log the full error object for debugging
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to upload file to S3");
+
     return false;
   }
 }
@@ -171,11 +229,30 @@ export async function generatePresignedUrl(
     logger.info({ key, url, fileName }, "Presigned URL generated");
     return { url, fileName };
 
-  } catch (error) {
-    logger.error(error, "Failed to generate presigned URL", {
+  } catch (error: any) {
+    const errorDetails: any = {
       sessionId,
-      fileId
-    });
+      fileId,
+    };
+
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to generate presigned URL");
     return { url: null, fileName: null };
   }
 }
@@ -199,11 +276,30 @@ export async function deleteFile(sessionId: string, fileId: string): Promise<boo
     logger.info({ key }, "File deleted successfully");
     return true;
 
-  } catch (error) {
-    logger.error(error, "Failed to delete file from S3", {
+  } catch (error: any) {
+    const errorDetails: any = {
       sessionId,
-      fileId
-    });
+      fileId,
+    };
+
+    if (error.$metadata) {
+      errorDetails.httpStatusCode = error.$metadata.httpStatusCode;
+      errorDetails.requestId = error.$metadata.requestId;
+    }
+
+    if (error.name) {
+      errorDetails.errorName = error.name;
+    }
+
+    if (error.message) {
+      errorDetails.errorMessage = error.message;
+    }
+
+    logger.error({
+      ...errorDetails,
+      error: error,
+      stack: error.stack,
+    }, "Failed to delete file from S3");
     return false;
   }
 }
