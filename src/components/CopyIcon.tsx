@@ -14,6 +14,7 @@ const CopyIcon: React.FC<Props> = ({ textToCopy, size = 18, className = '', ...r
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('copying')
     e.preventDefault();
     e.stopPropagation();
 

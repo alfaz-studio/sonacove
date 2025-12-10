@@ -6,9 +6,9 @@ import {
   AlertTriangle, 
   CircleCheck, 
   Trash2, 
-  Copy,
   Clock,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -21,8 +21,12 @@ import {
 
 import type { Meeting } from './MeetingListCard';
 import { formatDurationMs } from '@/components/lib/utils';
+import CopyIcon from '@/components/CopyIcon';
 
 const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past' }) => {
+  
+  if (status === 'Past') return;
+
   const styles = {
     Upcoming: "bg-green-100 text-green-800 border-green-200",
     Expired: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -71,9 +75,10 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
   }
 
   const meetingUrl = `/meet/${meeting.title}`; 
+  const fullUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${meetingUrl}`;
 
   return (
-    <div className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary-200 hover:shadow-sm transition-all duration-200 w-full ${isDeleting ? 'opacity-50' : ''}`}>
+    <div className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white transition-all duration-200 w-full ${isDeleting ? 'opacity-50 pointer-events-none' : 'hover:border-primary-200 hover:shadow-sm'}`}>
       
       {/* Date Box */}
       <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-2 sm:gap-0 w-full sm:w-24 sm:min-w-[100px]">
@@ -86,8 +91,8 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
         </div>
       </div>
 
-      {/* Info */}
-      <div className="flex-1 min-w-0 w-full">
+      {/* Info Section */}
+      <div className="flex-1 min-w-0 w-full mb-2 sm:mb-0">
         <div className="flex items-center gap-2 mb-1">
           <h4 className="text-base font-bold text-gray-900 truncate" title={meeting.title}>
             {meeting.title}
@@ -101,42 +106,49 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
         </p>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-end w-full sm:w-auto gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity mt-2 sm:mt-0">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-primary-500 hover:bg-primary-50">
-                <Copy className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy Link</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                onClick={handleDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      {/*  Actions Section */}
+      <div className="flex items-center w-full sm:w-auto mt-2 pt-3 border-t border-gray-100 sm:border-0 sm:mt-0 sm:pt-0 sm:ml-auto gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
         
+        {/* Copy & Delete Group */}
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-flex"> 
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-primary-500 hover:bg-primary-50">
+                    <CopyIcon textToCopy={fullUrl} />
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>Copy Link</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        
+        {/* Join Button */}
         <Button 
           size="sm" 
           asChild 
-          className="ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-8 text-xs font-semibold cursor-pointer shadow-none"
+          className="ml-auto sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-8 text-xs font-semibold cursor-pointer shadow-none px-4"
         >
-          <a href={meetingUrl}>
+          <a href={meetingUrl} className="flex items-center gap-2">
             Join
           </a>
         </Button>
