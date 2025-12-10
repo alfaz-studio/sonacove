@@ -1,0 +1,29 @@
+---
+---
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Logging out...</title>
+  </head>
+  <body>
+    <script>
+      import { getAuthService } from '../utils/AuthService';
+
+      async function handleLogoutCallback() {
+        try {
+          const authService = getAuthService();
+          await authService.handleLogoutCallback();
+        } catch (error) {
+          console.error('Logout callback warning:', error);
+        }
+
+        const returnUrl = sessionStorage.getItem('logout_return_url') || '/meet';
+        sessionStorage.removeItem('logout_return_url');
+
+        window.location.href = returnUrl;
+      }
+
+      handleLogoutCallback();
+    </script>
+  </body>
+</html>

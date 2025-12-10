@@ -37,7 +37,7 @@ export function getUserManager(): UserManager {
     authority: authorityUrl,
     client_id: 'jitsi-web',
     redirect_uri: `${siteUrl}/login-callback`,
-    post_logout_redirect_uri: `${siteUrl}/meet`,
+    post_logout_redirect_uri: `${siteUrl}/logout-callback`, 
     silent_redirect_uri: `${siteUrl}/silent-renew`,
     response_type: 'code',
     scope: 'openid profile email offline_access',
@@ -171,8 +171,18 @@ class AuthService {
    */
   public logout(): Promise<void> {
     this.ensureBrowser();
+    sessionStorage.setItem('logout_return_url', window.location.href);
     return this.userManager.signoutRedirect();
   }
+
+  /**
+   * Handles logout callback after the user is redirected back from the logout page.
+   */
+  public handleLogoutCallback(): Promise<any> {
+    this.ensureBrowser();
+    return this.userManager.signoutRedirectCallback();
+  }
+
 
   /**
    * Gets the current user object.
