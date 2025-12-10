@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pagination } from "../meetings/Pagination"
-import type { User } from "@/data/mock-dashboard"
+import type { User } from "@/data/dashboard-types"
 import { cn } from "@/components/lib/utils"
 
 interface UserDataTableProps {

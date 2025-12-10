@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import type { User } from "@/data/mock-dashboard"
+import type { User } from "@/data/dashboard-types"
 import { ArrowUpDown, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -69,7 +69,7 @@ export const createColumns = ({ onRoleChange, onDelete }: ColumnsProps): ColumnD
         <div className="flex items-center gap-3">
           <Avatar>
             <AvatarImage src={user.avatarUrl} />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <AvatarFallback>{(user.name || user.email).charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <span className="font-medium">{user.name}</span>

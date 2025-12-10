@@ -40,7 +40,7 @@ export function getUserManager(): UserManager {
     post_logout_redirect_uri: `${siteUrl}/logout-callback`, 
     silent_redirect_uri: `${siteUrl}/silent-renew`,
     response_type: 'code',
-    scope: 'openid profile email offline_access',
+    scope: 'openid profile email offline_access organization',
     automaticSilentRenew: true,
     userStore: userStore,
   };

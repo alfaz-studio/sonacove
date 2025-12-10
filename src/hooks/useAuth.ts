@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import type { DbUser } from '../pages/meet/types';
 import type { User as OidcUser } from 'oidc-client-ts';
 import { fetchDbUser } from '../utils/api';
+import { getOrganizationFromJWT } from '../lib/modules/jwt';
 
 /**
  * A simplified representation of a booked meeting for UI display.
@@ -49,6 +50,11 @@ export function useAuth() {
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   /** State for the formatted list of meetings derived from the dbUser. */
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  /** Organization context derived from the Keycloak token (organization scope). */
+  const [orgContext, setOrgContext] = useState<{
+    orgAlias: string | null;
+    orgId?: string | null;
+  }>({ orgAlias: null, orgId: null });
 
   // Effect to subscribe to the global AuthService and keep local state in sync.
   useEffect(() => {
@@ -93,10 +99,17 @@ export function useAuth() {
 
     if (isLoggedIn && oidcUser?.access_token) {
       getUserData(oidcUser.access_token);
+
+      const org = getOrganizationFromJWT(oidcUser.access_token);
+      setOrgContext({
+        orgAlias: org?.orgAlias ?? null,
+        orgId: org?.orgId ?? null,
+      });
     } else {
       setDbUser(null);
+      setOrgContext({ orgAlias: null, orgId: null });
     }
-  }, [oidcUser?.profile.sub]);
+  }, [oidcUser?.profile.sub, oidcUser?.access_token, isLoggedIn]);
 
   useEffect(() => {
     if (dbUser && dbUser.bookedRooms) {
@@ -124,6 +137,7 @@ export function useAuth() {
     isLoggedIn,
     dbUser,
     user: oidcUser,
+    org: orgContext,
     meetings,
     refetchMeetings,
     login: () => authService?.login(),
