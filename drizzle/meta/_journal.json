@@ -15,6 +15,13 @@
       "when": 1757532644910,
       "tag": "0001_nervous_the_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765187678784,
+      "tag": "0002_abnormal_kat_farrell",
+      "breakpoints": true
     }
   ]
 }
