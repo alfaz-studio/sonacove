@@ -188,22 +188,26 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
           </div>
 
           {/* Warnings */}
-          {isLoggedIn && isBookingLimitReached && (
-            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">
-              <AlertCircle size={14} />
-              <span>Booking limit reached ({maxBookings}/{maxBookings}).</span>
-            </div>
-          )}
-          {!isLoggedIn && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-2 rounded-md">
-              <Lock size={14} />
-              <span>Login required to book meetings.</span>
-            </div>
-          )}
-
-          <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1">
-            <Info className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>Meetings adapts to your teaching style using AI-driven features.</span>
+          <div className="pt-1">
+            {isLoggedIn && isBookingLimitReached ? (
+              // Case 1: Limit Reached
+              <div className="flex w-full justify-center items-center gap-2 text-xs tracking-wide text-amber-600 bg-amber-50 p-2 rounded-md">
+                <AlertCircle size={14} />
+                <span>Booking limit reached ({maxBookings}/{maxBookings}).</span>
+              </div>
+            ) : !isLoggedIn ? (
+              // Case 2: Not Logged In
+              <div className="flex w-full justify-center items-center gap-2 text-xs tracking-wide text-gray-500 bg-gray-50 p-2 rounded-md">
+                <Lock size={14} />
+                <span>Login required to book meetings.</span>
+              </div>
+            ) : (
+              // Case 3: All Good (Default State)
+              <div className="flex items-start gap-2 text-xs text-muted-foreground px-1">
+                <Info size={14} className="shrink-0 mt-0.5" />
+                <span>Enter a unique name to create a secure room instantly.</span>
+              </div>
+            )}
           </div>
         </form>
       </CardContent>
