@@ -241,4 +241,3 @@ export const getAnalytics = (meetings: Meeting[]) => {
 
   return { totalMinutes, totalMeetings, avgParticipants, chartData };
 };
-

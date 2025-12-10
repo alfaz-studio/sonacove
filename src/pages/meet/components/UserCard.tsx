@@ -1,7 +1,6 @@
 import React, { useState, useEffect} from 'react';
 import Tabs from './Tabs';
 import type { User } from '../types';
-import Avatar from '../../../components/Avatar';
 import UserInfo from './User.Info';
 import UserPlanDetails from './UserPlanDetails';
 
@@ -11,11 +10,6 @@ interface UserCardProps extends User {
   maxBookings: number;
   onMeetingDeleted: () => void;
   onMeetingBooked: () => void;
-}
-
-function capitalizeFirstLetter(str: string): string {
-  if (!str) return str; 
-  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, meetingsList, recordings, notes, minutesUsed, token, maxBookings, onMeetingDeleted, onMeetingBooked }) => {
@@ -61,16 +55,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, meetingsList, recordings, not
     }
   };
 
-  const totalMinutes = 1000;
-  const progressPercentage = minutesUsed
-    ? Math.min((minutesUsed / totalMinutes) * 100, 100)
-    : 0;
-
-    const usedBookings = meetingsList.filter(
+  const usedBookings = meetingsList.filter(
       (m) => m.status === 'Upcoming' || m.status === 'Expired',
     ).length;
-    const bookingProgressPercentage =
-      maxBookings > 0 ? (usedBookings / maxBookings) * 100 : 0;
 
   return (
     <div className='bg-white rounded-3xl p-6 border border-gray-200 shadow-sm lg:col-span-3'>

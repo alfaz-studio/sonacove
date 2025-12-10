@@ -6,13 +6,23 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import LoginRequired from './LoginRequired';
 
 interface SettingsViewProps {
   user: User;
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
-    const { isLoggedIn } = useAuth();
+  const { isLoggedIn } = useAuth();
+
+  if (!isLoggedIn) {
+    return (
+      <LoginRequired 
+        message="Account Settings" 
+        description="Please log in to manage your account settings and preferences." 
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -23,8 +33,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
         </p>
       </div>
 
-      {isLoggedIn && (
-        <Card>
+      <Card>
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
           <CardDescription>
@@ -45,7 +54,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           <Button>Save Changes</Button>
         </CardFooter>
       </Card>
-      )}
 
       <Card>
         <CardHeader>

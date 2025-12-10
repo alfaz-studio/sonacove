@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/components/lib/utils"
-import type { MeetingMetaData } from "@/data/sample-meetings"
+import type { MeetingMetaData } from "@/data/meeting-types"
 import { MeetingDetails } from "./MeetingDetails"
 import { Pagination } from "./Pagination"
 
@@ -93,7 +93,11 @@ export function DataTable({
 
     // Apply isHost filter
     if (customFilters.isHost) {
-      result = result.filter(row => row.email === user.email)
+      result = result.filter(row => {
+        // Check if user is in hosts array or email field (for backward compatibility)
+        const hosts = row.hosts || (row.email ? [row.email] : [])
+        return hosts.includes(user.email)
+      })
     }
 
     // Apply participantSize filter
@@ -144,7 +148,9 @@ export function DataTable({
     filterFns: {
       isHost: (row, columnId, filterValue) => {
         if (!filterValue) return true
-        return row.original.email === user.email
+        // Check if user is in hosts array or email field (for backward compatibility)
+        const hosts = row.original.hosts || (row.original.email ? [row.original.email] : [])
+        return hosts.includes(user.email)
       },
       participantSize: (row, columnId, filterValue) => {
         if (!filterValue) return true

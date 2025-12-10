@@ -3,9 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import type { VisibilityState } from "@tanstack/react-table"
 import type { DateRange } from "react-day-picker"
-import type { User } from '../../data/mock-dashboard';
-import { sampleMeetings, type MeetingMetaData } from '@/data/sample-meetings';
+import type { User } from '@/data/dashboard-types';
+import type { MeetingMetaData } from '@/data/meeting-types';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { fetchMeetings } from '@/utils/api';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
@@ -46,7 +48,7 @@ interface MeetingsViewProps {
 }
 
 const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, getAccessToken } = useAuth();
 
   if (!isLoggedIn) {
     return (
@@ -63,6 +65,19 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(subDays(new Date(), 6)),
     to: endOfDay(new Date()),
+  });
+
+  // Fetch meetings from API
+  const token = getAccessToken();
+  const { data: meetingsData = [], isLoading, error } = useQuery({
+    queryKey: ['meetings', dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryFn: async () => {
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      return fetchMeetings(token, dateRange?.from, dateRange?.to);
+    },
+    enabled: !!token && isLoggedIn,
   });
   const [isHostFilter, setIsHostFilter] = useState(false);
   const [participantSizeFilter, setParticipantSizeFilter] = useState<string>('');
@@ -141,9 +156,32 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
     }
   }, [dateRange])
 
+  // Get base meetings filtered by role (this is the base dataset for both analytics and table)
+  // This must be defined before the table instance
+  const baseMeetings = useMemo(() => {
+    // Cast the API response to MeetingMetaData[]
+    let result: MeetingMetaData[] = (meetingsData as MeetingMetaData[]) || [];
+
+    // Apply role-based filtering
+    if (user.role === 'teacher') {
+      result = result.filter(m => {
+        // Check if user is in hosts array or email field (for backward compatibility)
+        const hosts = m.hosts || (m.email ? [m.email] : []);
+        return hosts.includes(user.email);
+      });
+    } else if (user.role === 'student') {
+      result = result.filter(m => 
+        m.participants.some((p: string) => p === user.email)
+      );
+    }
+    // Owner and admin see all meetings
+
+    return result;
+  }, [meetingsData, user]);
+
   // Create table instance for ColumnToggle
   const table = useReactTable({
-    data: sampleMeetings,
+    data: baseMeetings,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -178,7 +216,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       if (email.includes(searchValue)) return true
       
       const participants = row.original.participants || []
-      if (participants.some(p => p.toLowerCase().includes(searchValue))) return true
+      if (participants.some((p: string) => p.toLowerCase().includes(searchValue))) return true
       
       return false
     },
@@ -204,30 +242,17 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
     setOngoingFilter(false);
   };
 
-  // Get base meetings filtered by role (this is the base dataset for both analytics and table)
-  const baseMeetings = useMemo(() => {
-    let result: MeetingMetaData[] = sampleMeetings;
-
-    // Apply role-based filtering
-    if (user.role === 'teacher') {
-      result = result.filter(m => m.email === user.email);
-    } else if (user.role === 'student') {
-      result = result.filter(m => 
-        m.participants.some(p => p === user.email)
-      );
-    }
-    // Owner and admin see all meetings
-
-    return result;
-  }, [user]);
-
   // Get filtered meetings based on all filters (for analytics)
   const filteredMeetings = useMemo(() => {
     let result: MeetingMetaData[] = baseMeetings;
 
     // Apply isHost filter
     if (isHostFilter) {
-      result = result.filter(row => row.email === user.email);
+      result = result.filter(row => {
+        // Check if user is in hosts array or email field (for backward compatibility)
+        const hosts = row.hosts || (row.email ? [row.email] : []);
+        return hosts.includes(user.email);
+      });
     }
 
     // Apply participantSize filter
@@ -270,7 +295,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
           title.includes(searchValue) ||
           hostName.includes(searchValue) ||
           email.includes(searchValue) ||
-          participants.some(p => p.toLowerCase().includes(searchValue))
+          participants.some((p: string) => p.toLowerCase().includes(searchValue))
         );
       });
     }
@@ -287,8 +312,8 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       : 0;
     
     // Calculate storage from recordings (in GB)
-    const totalStorageBytes = filteredMeetings.reduce((acc, m) => {
-      return acc + m.recordings.reduce((recAcc, rec) => recAcc + rec.size, 0);
+    const totalStorageBytes = filteredMeetings.reduce((acc: number, m) => {
+      return acc + m.recordings.reduce((recAcc: number, rec) => recAcc + (rec?.size || 0), 0);
     }, 0);
     const totalStorageGB = totalStorageBytes / (1024 * 1024 * 1024);
 
@@ -327,6 +352,24 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       color: "#f05023",
     },
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading meetings...</div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-600">Error loading meetings: {error instanceof Error ? error.message : 'Unknown error'}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

@@ -8,6 +8,7 @@ import { showPopup } from '../../utils/popupService';
 import StartMeetingCard from './overview/StartMeetingCard';
 import MeetingListCard, { type Meeting } from './overview/MeetingListCard';
 import OverviewStats from './overview/OverviewStats';
+import LoginRequired from './LoginRequired';
 
 interface LocalStorageMeeting {
   conference: string;
@@ -112,7 +113,7 @@ const OverviewView = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-      {/* Left Column */}
+      {/* Left Column - Always visible */}
       <div className="lg:col-span-2">
         <StartMeetingCard 
           onMeetingBooked={refetchMeetings} 
@@ -130,10 +131,18 @@ const OverviewView = () => {
 
       {/* Right Column */}
       <div className="lg:col-span-3">
-        <MeetingListCard 
-          meetings={allMeetings} 
-          onDelete={handleDeleteMeeting} 
-        />
+        {isLoggedIn ? (
+          <MeetingListCard 
+            meetings={allMeetings} 
+            onDelete={handleDeleteMeeting} 
+          />
+        ) : (
+          <LoginRequired 
+            message="Access Your Dashboard" 
+            description="Log in to view your meetings, manage bookings, and access all dashboard features." 
+            fullPage={false}
+          />
+        )}
       </div>
     </div>
   );

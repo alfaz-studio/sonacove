@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { USERS, type User, type Role } from '../../data/mock-dashboard';
+import type { Role } from '../../data/dashboard-types';
 import { 
   LayoutDashboard, 
   Video, 
@@ -10,13 +10,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import {
@@ -43,10 +43,20 @@ import Popup from '../Popup';
 import { usePopup } from '../../hooks/usePopup';
 import { useAuth } from '@/hooks/useAuth';
 import { getGravatarUrl } from '../../utils/gravatar';
+import LoginRequired from './LoginRequired';
 
 interface DashboardLayoutProps {}
 
 type View = 'overview' | 'meetings' | 'users' | 'developer' | 'settings';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  avatarUrl?: string;
+  joinedAt: string;
+}
 
 // Renders an arrow that flips direction based on sidebar state
 const CustomSidebarTrigger = () => {
@@ -69,20 +79,11 @@ const CustomSidebarTrigger = () => {
 };
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
-  // Demo State: Role Switcher - Select demo personas from actual users
-  const owner = USERS.find(u => u.role === "owner") || USERS[0];
-  const admin = USERS.find(u => u.role === "admin") || USERS[0];
-  const teacher = USERS.find(u => u.role === "teacher") || USERS[0];
-  const student = USERS.find(u => u.role === "student") || USERS[0];
-  
-  const demoPersonas = [owner, admin, teacher, student].filter(Boolean);
-  
-  // Default to the first demo persona initially
-  const [activeUser, setActiveUser] = useState<User>(demoPersonas[0] || USERS[0]); 
+  const [activeUser, setActiveUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState<View>('overview');
   
   // Get real auth data
-  const { user: oidcUser, dbUser, logout } = useAuth();
+  const { user: oidcUser, dbUser, logout, login } = useAuth();
   const { popup, hidePopup } = usePopup();
 
   useEffect(() => {
@@ -99,6 +100,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
       };
       
       setActiveUser(realUser);
+    } else {
+      setActiveUser(null);
     }
   }, [dbUser, oidcUser]);
 
@@ -121,10 +124,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const mainNavItems = getMainNavItems(activeUser.role);
+  // For guests, only show Overview in navigation
+  const mainNavItems = activeUser ? getMainNavItems(activeUser.role) : [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  ];
+
+  // For guests, only show Overview
+  const guestNavItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  ];
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Popup
         message={popup.message}
         type={popup.type}
@@ -153,7 +164,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {mainNavItems.map((item) => (
+                {(activeUser ? mainNavItems : guestNavItems).map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton
                       isActive={activeView === item.id}
@@ -172,111 +183,105 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
           {/* Spacer to push bottom nav to footer */}
           <div className="flex-1" />
 
-          {/* Bottom Navigation (Developer, Settings) */}
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {bottomNavItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={activeView === item.id}
-                      onClick={() => setActiveView(item.id as View)}
-                      tooltip={item.label}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {/* Bottom Navigation (Developer, Settings) - Only for logged in users */}
+          {activeUser && (
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {bottomNavItems.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton
+                        isActive={activeView === item.id}
+                        onClick={() => setActiveView(item.id as View)}
+                        tooltip={item.label}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
 
-        {/* User Profile / Role Switcher Footer */}
+        {/* User Profile Footer or Sign In Button */}
         <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton
-                    size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  >
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={activeUser.avatarUrl} alt={activeUser.name} />
-                      <AvatarFallback className="rounded-lg">{activeUser.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{activeUser.name}</span>
-                      <span className="truncate text-xs text-muted-foreground capitalize">{activeUser.role}</span>
-                    </div>
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                  side="top"
-                  align="start"
-                  sideOffset={4}
-                >
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Switch Demo Persona
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {demoPersonas.map((u) => (
-                    <DropdownMenuItem 
-                      key={u.id} 
-                      onClick={() => {
-                        setActiveUser(u);
-                        setActiveView('overview'); // Reset view on switch
-                      }}
-                      className={activeUser.id === u.id ? "bg-accent" : ""}
+          {activeUser ? (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton
+                      size="lg"
+                      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarImage src={u.avatarUrl} />
-                        <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
+                      <Avatar className="h-8 w-8 rounded-lg">
+                        <AvatarImage src={activeUser.avatarUrl} alt={activeUser.name} />
+                        <AvatarFallback className="rounded-lg">{activeUser.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col">
-                        <span>{u.name}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{u.role}</span>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">{activeUser.name}</span>
+                        <span className="truncate text-xs text-muted-foreground capitalize">{activeUser.role}</span>
                       </div>
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                    side="top"
+                    align="start"
+                    sideOffset={4}
+                  >
+                    <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={logout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={logout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          ) : (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  size="lg"
+                  onClick={login}
+                  className="w-full"
+                >
+                  <span>Sign In / Register</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
         </SidebarFooter>
       </Sidebar>
 
       {/* Main Content */}
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Merhaba, {activeUser.name.split(' ')[0]}
-            </h1>
-            <p className="text-sm text-gray-500">
-              Here's what's happening with your meetings.
-            </p>
-          </div>
-        </header>
+        {activeUser && (
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Merhaba, {activeUser.name.split(' ')[0]}
+              </h1>
+              <p className="text-sm text-gray-500">
+                Here's what's happening with your meetings.
+              </p>
+            </div>
+          </header>
+        )}
 
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
           {activeView === 'overview' && <OverviewView />}
-          {activeView === 'meetings' && <MeetingsView user={activeUser} />}
-          {activeView === 'users' && <UsersView user={activeUser} />}
+          {activeView === 'meetings' && (activeUser ? <MeetingsView user={activeUser} /> : <LoginRequired />)}
+          {activeView === 'users' && (activeUser ? <UsersView user={activeUser} /> : <LoginRequired />)}
           {activeView === 'developer' && <DeveloperView />}
-          {activeView === 'settings' && <SettingsView user={activeUser} />}
+          {activeView === 'settings' && (activeUser ? <SettingsView user={activeUser} /> : <LoginRequired />)}
         </main>
       </SidebarInset>
     </SidebarProvider>
-    </>
+    </QueryClientProvider>
   );
 };
 

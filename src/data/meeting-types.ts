@@ -1,5 +1,5 @@
 import { subDays, format } from "date-fns";
-import { USERS } from "./mock-dashboard";
+import { USERS } from "./dashboard-types";
 
 export type MeetingStatus = "completed" | "scheduled" | "in_progress" | "cancelled";
 
@@ -66,10 +66,12 @@ export interface MeetingMetaData {
   title: string;
   timestamp: number;
   endTimestamp: number;
-  email: string; // host email
-  hostName: string;
+  email: string; // host email (kept for backward compatibility, use hosts array instead)
+  hostName: string; // primary host name (kept for backward compatibility, use hostNames array instead)
+  hosts: string[]; // array of host emails (may include nulls for guest hosts)
+  hostNames: string[]; // array of host names
   duration: number; // minutes
-  participants: string[];
+  participants: string[]; // array of participant emails/identifiers (may include non-email strings for guests)
   participantCount: number;
   status: MeetingStatus;
   
@@ -347,6 +349,8 @@ function generateMeeting(index: number, daysAgo: number): MeetingMetaData {
     endTimestamp,
     email: host.email,
     hostName: host.name,
+    hosts: [host.email],
+    hostNames: [host.name],
     duration,
     participants: selectedParticipants,
     participantCount,

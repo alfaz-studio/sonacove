@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState } from 'react';
-import type { User, Role } from '../../data/mock-dashboard';
-import { USERS } from '../../data/mock-dashboard';
+import type { User, Role } from '@/data/dashboard-types';
+import { USERS } from '@/data/dashboard-types';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {

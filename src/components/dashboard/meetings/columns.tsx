@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import type { MeetingMetaData } from "@/data/sample-meetings"
+import type { MeetingMetaData } from "@/data/meeting-types"
 import { format } from "date-fns"
 import { ArrowUpDown, Video, FileText, MessageSquare, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -125,13 +125,59 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
       )
     },
     cell: ({ row }) => {
-      const hostName = row.getValue("hostName") as string
-      const email = row.original.email
+      const meeting = row.original
+      // Use hosts array if available, otherwise fall back to email field
+      const hosts = meeting.hosts || (meeting.email ? [meeting.email] : [])
+      const hostNames = meeting.hostNames || (meeting.hostName ? [meeting.hostName] : [])
+      
+      // Extract names from email addresses if hostNames not available
+      const displayNames = hostNames.length > 0 
+        ? hostNames 
+        : hosts.map(email => {
+            if (!email) return "Guest"
+            const namePart = email.split("@")[0]
+            return namePart.split(".").map(part => 
+              part.charAt(0).toUpperCase() + part.slice(1)
+            ).join(" ")
+          })
+      
+      // Show first 2 names, then "and X more"
+      const maxVisible = 2
+      const visibleNames = displayNames.slice(0, maxVisible)
+      const remainingCount = displayNames.length - maxVisible
+      
       return (
-        <div className="flex flex-col">
-          <span>{hostName}</span>
-          <span className="text-xs text-muted-foreground">{email}</span>
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex flex-col gap-1 cursor-help">
+                <div className="text-sm">
+                  {visibleNames.join(", ")}
+                  {remainingCount > 0 && ` and ${remainingCount} more`}
+                </div>
+                {hosts.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {hosts.slice(0, maxVisible).join(", ")}
+                    {remainingCount > 0 && ` and ${remainingCount} more`}
+                  </div>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <div className="text-sm">
+                <p className="font-medium mb-1">All Hosts ({hosts.length}):</p>
+                <ul className="list-disc list-inside">
+                  {displayNames.map((name, i) => (
+                    <li key={i} className="text-xs">
+                      {name}
+                      {hosts[i] && <span className="text-muted-foreground"> ({hosts[i]})</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )
     },
   },
@@ -196,12 +242,19 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
       const count = row.getValue("participantCount") as number
       const participants = row.original.participants
       
-      // Extract names from email addresses (format: firstname.lastname@example.com)
-      const participantNames = participants.map(email => {
-        const namePart = email.split("@")[0]
-        return namePart.split(".").map(part => 
-          part.charAt(0).toUpperCase() + part.slice(1)
-        ).join(" ")
+      // Extract names from email addresses or use identifier as-is for guests
+      const participantNames = participants.map(identifier => {
+        // Check if it's an email address
+        if (identifier.includes("@")) {
+          const namePart = identifier.split("@")[0]
+          return namePart.split(".").map(part => 
+            part.charAt(0).toUpperCase() + part.slice(1)
+          ).join(" ")
+        }
+        // For guests (non-email identifiers), use as-is or format if it looks like a JID
+        return identifier.includes("@") && identifier.includes(".") 
+          ? identifier.split("@")[0] 
+          : identifier
       })
       
       // Show first 3 names, then "and X more"
