@@ -218,20 +218,24 @@ async function getOrCreateMeeting(db: ReturnType<typeof createDb>, args: {
     breakoutRoomId?: string;
     isLobby?: boolean;
     lobbyRoomId?: string;
+    startedAt?: Date;
 }) {
-    const { roomName, roomJid, isBreakout, breakoutRoomId, isLobby, lobbyRoomId } = args;
+    const { roomName, roomJid, isBreakout, breakoutRoomId, isLobby, lobbyRoomId, startedAt } = args;
     if (!roomName && !roomJid) {
         throw new Error("roomName or roomJid required to create meeting");
     }
 
+    const whereClauses = [
+        roomJid
+            ? eq(meetings.roomJid, roomJid)
+            : and(eq(meetings.roomName, roomName ?? ""), eq(meetings.isBreakout, !!isBreakout)),
+        eq(meetings.status, "ongoing"),
+    ];
+
     const [existing] = await db
         .select()
         .from(meetings)
-        .where(
-            roomJid
-                ? eq(meetings.roomJid, roomJid)
-                : and(eq(meetings.roomName, roomName ?? ""), eq(meetings.isBreakout, !!isBreakout))
-        )
+        .where(and(...whereClauses))
         .limit(1);
 
     if (existing) {
@@ -248,12 +252,66 @@ async function getOrCreateMeeting(db: ReturnType<typeof createDb>, args: {
             isLobby: !!isLobby,
             lobbyRoomId: lobbyRoomId ?? null,
             status: "ongoing",
-            startedAt: new Date(),
+            startedAt: startedAt ?? new Date(),
             updatedAt: new Date(),
         })
         .returning();
 
     return inserted;
+}
+
+function normalizeOccupant(occupant: any) {
+    const data = occupant ?? {};
+    return {
+        occupant_jid: data.occupant_jid ?? data.jid ?? null,
+        name: data.name ?? null,
+        email: data.email ?? null,
+        id: data.id ?? null,
+        role: data.role ?? null,
+        affiliation: data.affiliation ?? null,
+        joined_at: data.joined_at ?? null,
+        left_at: data.left_at ?? null,
+    };
+}
+
+function buildEventMetadata(eventType: string, payload: any) {
+    switch (eventType) {
+        case "room_created":
+            return {
+                is_breakout: !!payload.is_breakout,
+                breakout_room_id: payload.breakout_room_id ?? null,
+                is_lobby: !!payload.is_lobby,
+                lobby_room_id: payload.lobby_room_id ?? null,
+            };
+        case "room_destroyed":
+            return {
+                destroyed_at: payload.destroyed_at ?? null,
+                all_occupants: Array.isArray(payload.all_occupants)
+                    ? payload.all_occupants.map(normalizeOccupant)
+                    : [],
+            };
+        case "occupant_joined":
+        case "occupant_left":
+            return {
+                occupant: normalizeOccupant(payload.occupant),
+                active_occupants_count: payload.active_occupants_count ?? null,
+            };
+        case "role_changed":
+        case "affiliation_changed":
+            return {
+                occupant: normalizeOccupant(payload.occupant),
+            };
+        case "host_assigned":
+        case "host_left":
+            return {
+                email: payload.email ?? null,
+                occupant_jid: payload.occupant_jid ?? null,
+                role: payload.role ?? null,
+                affiliation: payload.affiliation ?? null,
+            };
+        default:
+            return {};
+    }
 }
 
 async function insertMeetingEvent(db: ReturnType<typeof createDb>, args: {
@@ -272,6 +330,7 @@ async function insertMeetingEvent(db: ReturnType<typeof createDb>, args: {
 }
 
 async function handleRoomCreated(db: ReturnType<typeof createDb>, payload: any) {
+    const createdAt = payload.created_at ? new Date(payload.created_at * 1000) : undefined;
     const meeting = await getOrCreateMeeting(db, {
         roomName: payload.room_name,
         roomJid: payload.room_jid,
@@ -279,13 +338,14 @@ async function handleRoomCreated(db: ReturnType<typeof createDb>, payload: any) 
         breakoutRoomId: payload.breakout_room_id,
         isLobby: payload.is_lobby,
         lobbyRoomId: payload.lobby_room_id,
+        startedAt: createdAt,
     });
 
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "room_created",
-        metadata: payload,
-        eventTimestamp: payload.created_at ? new Date(payload.created_at * 1000) : undefined,
+        metadata: buildEventMetadata("room_created", payload),
+        eventTimestamp: createdAt,
     });
 }
 
@@ -299,11 +359,13 @@ async function handleRoomDestroyed(db: ReturnType<typeof createDb>, payload: any
         lobbyRoomId: payload.lobby_room_id,
     });
 
+    const destroyedAt = payload.destroyed_at ? new Date(payload.destroyed_at * 1000) : new Date();
+
     await db
         .update(meetings)
         .set({
             status: "ended",
-            endedAt: payload.destroyed_at ? new Date(payload.destroyed_at * 1000) : new Date(),
+            endedAt: destroyedAt,
             updatedAt: new Date(),
         })
         .where(eq(meetings.id, meeting.id));
@@ -311,8 +373,8 @@ async function handleRoomDestroyed(db: ReturnType<typeof createDb>, payload: any
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "room_destroyed",
-        metadata: payload,
-        eventTimestamp: payload.destroyed_at ? new Date(payload.destroyed_at * 1000) : undefined,
+        metadata: buildEventMetadata("room_destroyed", payload),
+        eventTimestamp: destroyedAt,
     });
 }
 
@@ -329,7 +391,7 @@ async function handleOccupantJoined(db: ReturnType<typeof createDb>, payload: an
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "occupant_joined",
-        metadata: payload,
+        metadata: buildEventMetadata("occupant_joined", payload),
         eventTimestamp: payload.occupant?.joined_at ? new Date(payload.occupant.joined_at * 1000) : undefined,
     });
 }
@@ -347,7 +409,7 @@ async function handleOccupantLeft(db: ReturnType<typeof createDb>, payload: any)
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "occupant_left",
-        metadata: payload,
+        metadata: buildEventMetadata("occupant_left", payload),
         eventTimestamp: payload.occupant?.left_at ? new Date(payload.occupant.left_at * 1000) : undefined,
     });
 }
@@ -365,7 +427,7 @@ async function handleRoleChanged(db: ReturnType<typeof createDb>, payload: any) 
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "role_changed",
-        metadata: payload,
+        metadata: buildEventMetadata("role_changed", payload),
     });
 }
 
@@ -382,7 +444,7 @@ async function handleAffiliationChanged(db: ReturnType<typeof createDb>, payload
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: "affiliation_changed",
-        metadata: payload,
+        metadata: buildEventMetadata("affiliation_changed", payload),
     });
 }
 
@@ -398,10 +460,8 @@ async function recordHostMeetingEvent(
     await insertMeetingEvent(db, {
         meetingId: meeting.id,
         eventType: args.eventType,
-        metadata: {
-            room_name: args.roomName,
-            room_jid: args.roomJid,
+        metadata: buildEventMetadata(args.eventType, {
             email: args.email,
-        },
+        }),
     });
 }
