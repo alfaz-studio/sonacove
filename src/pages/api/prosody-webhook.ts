@@ -57,6 +57,41 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
             });
         }
 
+        // Basic payload validation for required fields
+        const eventsRequiringRoom = new Set([
+            "room_created",
+            "room_destroyed",
+            "occupant_joined",
+            "occupant_left",
+            "role_changed",
+            "affiliation_changed",
+            "muc-room-created",
+            "muc-room-destroyed",
+            "muc-occupant-joined",
+            "muc-occupant-left",
+            "muc-role-changed",
+            "muc-affiliation-changed",
+            "HOST_ASSIGNED",
+            "HOST_LEFT",
+        ]);
+
+        if (eventsRequiringRoom.has(eventName) && !roomName && !roomJid) {
+            logger.error(`Missing room identifier for event ${eventName}`);
+            return new Response(JSON.stringify({ error: "Missing room or room_jid" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
+        const eventsRequiringEmail = new Set(["HOST_ASSIGNED", "HOST_LEFT"]);
+        if (eventsRequiringEmail.has(eventName) && !email) {
+            logger.error(`Missing email for host event ${eventName}`);
+            return new Response(JSON.stringify({ error: "Missing email for host event" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
         logger.info(`Received prosody webhook event: ${eventName} for room: ${roomName ?? "unknown"}`);
 
         // Dispatch event processing asynchronously
