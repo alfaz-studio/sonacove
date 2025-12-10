@@ -1,6 +1,7 @@
+"use client"
+
 import React, { useState } from 'react';
 import { 
-  Calendar as CalendarIcon, 
   History, 
   AlertTriangle, 
   CircleCheck, 
@@ -17,6 +18,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+import type { Meeting } from './MeetingListCard';
+import { formatDurationMs } from '@/components/lib/utils';
 
 const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past' }) => {
   const styles = {
@@ -39,9 +43,8 @@ const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past
   );
 };
 
-// --- Main Component ---
 interface MeetingListItemProps {
-  meeting: any;
+  meeting: Meeting; 
   onDelete: (id: string) => void;
 }
 
@@ -52,48 +55,54 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
     e.preventDefault();
     e.stopPropagation();
     setIsDeleting(true);
-    // Simulate API call delay
     setTimeout(() => {
       onDelete(meeting.id);
       setIsDeleting(false);
     }, 800);
   };
 
-  const formattedDate = format(new Date(meeting.timestamp), 'MMM d, yyyy');
-  const formattedTime = format(new Date(meeting.timestamp), 'h:mm a');
+  const dateObj = new Date(meeting.timestamp);
+  const formattedDate = format(dateObj, 'MMM d, yyyy');
+  const formattedTime = format(dateObj, 'h:mm a');
   
-  // Logic to determine status
   let status: 'Upcoming' | 'Past' = 'Past';
-  if (isAfter(new Date(meeting.timestamp), new Date())) {
+  if (isAfter(dateObj, new Date())) {
     status = 'Upcoming';
   }
 
   const meetingUrl = `/meet/${meeting.title}`; 
 
   return (
-    <div className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary-200 hover:shadow-sm transition-all duration-200 ${isDeleting ? 'opacity-50' : ''}`}>
+    <div className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-primary-200 hover:shadow-sm transition-all duration-200 w-full ${isDeleting ? 'opacity-50' : ''}`}>
+      
       {/* Date Box */}
-      <div className="flex sm:flex-col items-center sm:items-start gap-2 sm:gap-0 min-w-[100px]">
-        <span className="text-sm font-semibold text-gray-900">{formattedDate}</span>
-        <span className="text-xs text-gray-500">{formattedTime}</span>
+      <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-2 sm:gap-0 w-full sm:w-24 sm:min-w-[100px]">
+        <div className="flex flex-row sm:flex-col gap-2 sm:gap-0 items-center sm:items-start">
+          <span className="text-sm font-semibold text-gray-900">{formattedDate}</span>
+          <span className="text-xs text-gray-500">{formattedTime}</span>
+        </div>
+        <div className="sm:hidden">
+          <MeetingStatusBadge status={status} />
+        </div>
       </div>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 w-full">
         <div className="flex items-center gap-2 mb-1">
           <h4 className="text-base font-bold text-gray-900 truncate" title={meeting.title}>
             {meeting.title}
           </h4>
-          <MeetingStatusBadge status={status} />
+          <div className="hidden sm:block">
+            <MeetingStatusBadge status={status} />
+          </div>
         </div>
         <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-          <Clock className="h-3 w-3" /> Duration: {Math.floor(meeting.duration)}m
+          <Clock className="h-3 w-3" /> Duration: {formatDurationMs(Number(meeting.duration))}
         </p>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        {/* Copy Link Button */}
+      <div className="flex items-center justify-end w-full sm:w-auto gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity mt-2 sm:mt-0">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -105,7 +114,6 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
           </Tooltip>
         </TooltipProvider>
 
-        {/* Delete Button */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -123,7 +131,6 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
           </Tooltip>
         </TooltipProvider>
         
-        {/* Join Button */}
         <Button 
           size="sm" 
           asChild 

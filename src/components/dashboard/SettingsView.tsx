@@ -5,12 +5,15 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SettingsViewProps {
   user: User;
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
+    const { isLoggedIn } = useAuth();
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex flex-col gap-2">
@@ -20,7 +23,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
         </p>
       </div>
 
-      <Card>
+      {isLoggedIn && (
+        <Card>
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
           <CardDescription>
@@ -41,6 +45,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           <Button>Save Changes</Button>
         </CardFooter>
       </Card>
+      )}
 
       <Card>
         <CardHeader>

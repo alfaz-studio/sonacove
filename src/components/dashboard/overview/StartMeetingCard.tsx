@@ -22,6 +22,11 @@ import { showPopup } from '@/utils/popupService';
 
 import RoomAvailabilityStatus from '@/pages/meet/components/RoomAvailabilityStatus';
 
+interface StartMeetingCardProps {
+  onMeetingBooked?: () => void;
+  bookedMeetingsCount?: number;
+}
+
 const InputCopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
 
@@ -50,22 +55,21 @@ const InputCopyButton = ({ text }: { text: string }) => {
   );
 };
 
-const StartMeetingCard = () => {
-  const inputRef = useRef<HTMLInputElement>(null);
+const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bookedMeetingsCount }) => {
   const [roomName, setRoomName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const [placeholder, setPlaceholder] = useState('');
   const [isRoomNameInvalid, setIsRoomNameInvalid] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
-
+  
   const { isLoggedIn, getAccessToken, dbUser, refetchMeetings } = useAuth();
+
   const { isChecking, isAvailable, error: availabilityError } = useRoomAvailability(roomName, isRoomNameInvalid);
 
-  // Booking Limits
-  const usedBookings = 0; // Ideally fetched from props or context
+  const usedBookings = bookedMeetingsCount ?? dbUser?.bookedRooms?.length ?? 0;
   const maxBookings = dbUser?.user.maxBookings ?? 1;
   const isBookingLimitReached = usedBookings >= maxBookings;
 
-  // Placeholder Animation
   useEffect(() => {
     const words = generatePlaceholderWords(10);
     setPlaceholder(words[0]);
@@ -110,7 +114,13 @@ const StartMeetingCard = () => {
     try {
       const futureDate = addYears(new Date(), 1);
       await bookMeeting(finalRoomName, futureDate, token);
+      
+      // Trigger parent update
+      if (onMeetingBooked) onMeetingBooked();
+      
+      // Also update local state
       if (refetchMeetings) refetchMeetings();
+
       showPopup('Meeting booked successfully!', 'success');
       setRoomName('');
     } catch (error) {
@@ -130,7 +140,7 @@ const StartMeetingCard = () => {
   const isBookButtonDisabled = (isLoggedIn && isBookingLimitReached) || isBooking;
 
   return (
-    <Card className="border-border shadow-sm h-fit bg-white">
+    <Card className={`border-border shadow-sm bg-white ${!isLoggedIn ? 'h-full' : 'h-fit'}`}>
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-gray-900">Start a Meeting</CardTitle>
         <CardDescription>Create a secure room instantly or schedule for later.</CardDescription>

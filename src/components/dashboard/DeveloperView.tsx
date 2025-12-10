@@ -16,6 +16,8 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Checkbox } from '../ui/checkbox';
+import { useAuth } from '@/hooks/useAuth';
+import LoginRequired from './LoginRequired';
 
 interface ApiKey {
   id: string;
@@ -31,6 +33,17 @@ interface Webhook {
 }
 
 const DeveloperView: React.FC = () => {
+  const { isLoggedIn } = useAuth();
+
+  if (!isLoggedIn) {
+    return (
+      <LoginRequired
+        message="Developer Console" 
+        description="Log in to manage API keys, webhooks, and integration settings." 
+      />
+    );
+  }
+
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([
     { id: '1', key: 'sk_live_51M0...234x' },
   ]);

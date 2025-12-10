@@ -43,12 +43,25 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
+import { useAuth } from '@/hooks/useAuth';
+import LoginRequired from './LoginRequired';
 
 interface UsersViewProps {
   user: User;
 }
 
 const UsersView: React.FC<UsersViewProps> = ({ user }) => {
+  const { isLoggedIn } = useAuth();
+
+  if (!isLoggedIn) {
+    return (
+      <LoginRequired 
+        message="User Management" 
+        description="You must be logged in to manage organization members and permissions." 
+      />
+    );
+  }
+
   const [users, setUsers] = useState<User[]>(USERS);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

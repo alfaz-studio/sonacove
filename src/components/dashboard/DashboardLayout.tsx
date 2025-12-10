@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { USERS, type User, type Role } from '../../data/mock-dashboard';
 import { 
   LayoutDashboard, 
@@ -41,6 +41,8 @@ import SettingsView from './SettingsView';
 import SonacoveLogo from '../../assets/sonacove-orange.svg';
 import Popup from '../Popup';
 import { usePopup } from '../../hooks/usePopup';
+import { useAuth } from '@/hooks/useAuth';
+import { getGravatarUrl } from '../../utils/gravatar';
 
 interface DashboardLayoutProps {}
 
@@ -75,9 +77,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
   
   const demoPersonas = [owner, admin, teacher, student].filter(Boolean);
   
-  const [activeUser, setActiveUser] = useState<User>(demoPersonas[0] || USERS[0]); // Default to Owner
+  // Default to the first demo persona initially
+  const [activeUser, setActiveUser] = useState<User>(demoPersonas[0] || USERS[0]); 
   const [activeView, setActiveView] = useState<View>('overview');
+  
+  // Get real auth data
+  const { user: oidcUser, dbUser, logout } = useAuth();
   const { popup, hidePopup } = usePopup();
+
+  useEffect(() => {
+    if (dbUser && oidcUser) {
+      const avatar = oidcUser.profile.picture || getGravatarUrl(dbUser.user.email);
+
+      const realUser: User = {
+        id: String(dbUser.user.id),
+        name: oidcUser.profile.name || dbUser.user.email.split('@')[0],
+        email: dbUser.user.email,
+        role: 'owner', // Hardcode owner for now
+        avatarUrl: avatar,
+        joinedAt: dbUser.user.createdAt,
+      };
+      
+      setActiveUser(realUser);
+    }
+  }, [dbUser, oidcUser]);
 
   // Navigation Items based on Role
   const getMainNavItems = (role: Role) => {
@@ -197,7 +220,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                   sideOffset={4}
                 >
                   <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Switch Demo Personal
+                    Switch Demo Persona
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {demoPersonas.map((u) => (
@@ -220,7 +243,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600 cursor-pointer">
+                  <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -245,7 +268,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
-          {activeView === 'overview' && <OverviewView user={activeUser} />}
+          {activeView === 'overview' && <OverviewView />}
           {activeView === 'meetings' && <MeetingsView user={activeUser} />}
           {activeView === 'users' && <UsersView user={activeUser} />}
           {activeView === 'developer' && <DeveloperView />}

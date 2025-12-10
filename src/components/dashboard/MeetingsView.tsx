@@ -25,6 +25,7 @@ import { columns } from './meetings/columns';
 import { DateRangeFilter } from './meetings/DateRangeFilter';
 import { ColumnToggle } from './meetings/ColumnToggle';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import LoginRequired from './LoginRequired';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { format } from 'date-fns';
 import {
@@ -38,12 +39,24 @@ import {
   type ColumnFiltersState,
   type ExpandedState,
 } from "@tanstack/react-table"
+import { useAuth } from '@/hooks/useAuth';
 
 interface MeetingsViewProps {
   user: User;
 }
 
 const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
+  const { isLoggedIn } = useAuth();
+
+  if (!isLoggedIn) {
+    return (
+      <LoginRequired 
+        message="Access Your Meetings" 
+        description="Please log in to view detailed analytics, recordings, and meeting history." 
+      />
+    );
+  }
+
   // Search and filter state
   const [globalFilter, setGlobalFilter] = useState('');
   // Default to last 7 days
