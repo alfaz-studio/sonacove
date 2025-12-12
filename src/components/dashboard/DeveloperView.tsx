@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Copy, Plus, Trash2, Key, Webhook, Code } from 'lucide-react';
+import { Copy, Plus, Trash2, Key, Webhook, Code, AlertCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import {
@@ -141,8 +141,19 @@ const DeveloperView: React.FC = () => {
 </script>`;
 
   return (
-    <div className="space-y-12">
-      <div className="flex flex-col gap-2">
+    <div className="space-y-8">
+      {/* Work In Progress Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <h3 className="text-sm font-semibold text-amber-900">Developer Tools - Coming Soon</h3>
+          <p className="text-sm text-amber-700 mt-1">
+            We are putting the finishing touches on our API and Webhook integrations. These features are currently disabled for preview purposes.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 opacity-60">
         <h2 className="text-xl font-semibold">Developer Console</h2>
         <p className="text-sm text-muted-foreground">
           Manage API keys and Webhooks to integrate Sonacove into your applications.
@@ -150,7 +161,7 @@ const DeveloperView: React.FC = () => {
       </div>
 
       {/* Embed Section */}
-      <div className="space-y-4">
+      <div className="space-y-4 opacity-60">
         <div className="flex flex-col gap-2">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Code className="h-5 w-5" /> Embed in your application
@@ -165,13 +176,15 @@ const DeveloperView: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <textarea
                   readOnly
+                  disabled
                   value={embedCode}
-                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-none"
+                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-none cursor-not-allowed text-muted-foreground"
                   onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                 />
                 <Button
                   size="sm"
                   className="px-3"
+                  disabled
                   onClick={() => handleCopy(embedCode)}
                 >
                   <span className="sr-only">Copy</span>
@@ -192,7 +205,7 @@ const DeveloperView: React.FC = () => {
       <Separator className="my-8" />
 
       {/* API Keys Section */}
-      <div className="space-y-4">
+      <div className="space-y-4 opacity-60">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -202,7 +215,7 @@ const DeveloperView: React.FC = () => {
               Use these keys to authenticate your requests to the Sonacove API.
             </p>
           </div>
-          <Button className="gap-2" onClick={() => setIsAddApiKeyOpen(true)}>
+          <Button className="gap-2" disabled onClick={() => setIsAddApiKeyOpen(true)}>
             <Plus className="h-4 w-4" /> Add API Key
           </Button>
         </div>
@@ -223,12 +236,14 @@ const DeveloperView: React.FC = () => {
                       <Input
                         value={apiKey.key}
                         readOnly
-                        className="font-mono text-xs"
+                        disabled
+                        className="font-mono text-xs cursor-not-allowed"
                       />
                     </div>
                     <Button
                       size="sm"
                       className="px-3"
+                      disabled
                       onClick={() => handleCopy(apiKey.key)}
                     >
                       <span className="sr-only">Copy</span>
@@ -237,9 +252,10 @@ const DeveloperView: React.FC = () => {
                     <Button
                       size="sm"
                       variant="ghost"
+                      disabled
                       onClick={() => handleDeleteApiKey(apiKey.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-red-500 opacity-50" />
                     </Button>
                   </div>
                 ))
@@ -247,7 +263,7 @@ const DeveloperView: React.FC = () => {
               <div className="rounded-md border bg-muted p-4">
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Key className="h-4 w-4" /> Read the{' '}
-                  <a href="/api/scalar" target="_blank" className="text-primary underline">
+                  <a href="/api/scalar" target="_blank" className="text-primary underline pointer-events-none opacity-50">
                     API Documentation
                   </a>{' '}
                   to get started.
@@ -261,7 +277,7 @@ const DeveloperView: React.FC = () => {
       <Separator className="my-8" />
 
       {/* Webhooks Section */}
-      <div className="space-y-4">
+      <div className="space-y-4 opacity-60">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -271,7 +287,7 @@ const DeveloperView: React.FC = () => {
               Events sent to your endpoints.
             </p>
           </div>
-          <Button className="gap-2" onClick={() => setIsAddWebhookOpen(true)}>
+          <Button className="gap-2" disabled onClick={() => setIsAddWebhookOpen(true)}>
             <Plus className="h-4 w-4" /> Add Webhook
           </Button>
         </div>
@@ -300,7 +316,7 @@ const DeveloperView: React.FC = () => {
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
                           {webhook.events.map((event) => (
-                            <Badge key={event} variant="secondary">
+                            <Badge key={event} variant="secondary" className="opacity-70">
                               {event}
                             </Badge>
                           ))}
@@ -310,8 +326,8 @@ const DeveloperView: React.FC = () => {
                         <Badge
                           className={
                             webhook.status === 'active'
-                              ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                              : ''
+                              ? 'bg-green-100 text-green-800 hover:bg-green-100 opacity-70'
+                              : 'opacity-70'
                           }
                           variant={webhook.status === 'test' ? 'outline' : 'default'}
                         >
@@ -322,9 +338,10 @@ const DeveloperView: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
+                          disabled
                           onClick={() => handleDeleteWebhook(webhook.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4 text-red-500 opacity-50" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -336,7 +353,7 @@ const DeveloperView: React.FC = () => {
         </Card>
       </div>
 
-      {/* Add Webhook Dialog */}
+      {/* Add Webhook Dialog (Triggers disabled, so these won't be reachable) */}
       <Dialog open={isAddWebhookOpen} onOpenChange={setIsAddWebhookOpen}>
         <DialogContent>
           <DialogHeader>
@@ -387,7 +404,7 @@ const DeveloperView: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Add API Key Dialog */}
+      {/* Add API Key Dialog (Triggers disabled, so these won't be reachable) */}
       <Dialog open={isAddApiKeyOpen} onOpenChange={setIsAddApiKeyOpen}>
         <DialogContent>
           <DialogHeader>
@@ -423,4 +440,3 @@ const DeveloperView: React.FC = () => {
 };
 
 export default DeveloperView;
-
