@@ -57,6 +57,10 @@ export const organizationMembers = sonacoveSchema.table("organization_members", 
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   role: varchar("role", { length: 20 }).notNull().default("teacher"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  kcUserId: varchar("kc_user_id", { length: 255 }),
+  invitedEmail: varchar("invited_email", { length: 255 }),
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
   joinedAt: timestamp("joined_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

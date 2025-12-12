@@ -7,20 +7,14 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Mail } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
+import { Badge } from "@/components/ui/badge"
 interface ColumnsProps {
   onRoleChange: (userId: string, newRole: User["role"]) => void
   onDelete: (userId: string) => void
+  canManage?: boolean
 }
 
-export const createColumns = ({ onRoleChange, onDelete }: ColumnsProps): ColumnDef<User>[] => [
+export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): ColumnDef<User>[] => [
   // Selection checkbox column
   {
     id: "select",
@@ -82,7 +76,7 @@ export const createColumns = ({ onRoleChange, onDelete }: ColumnsProps): ColumnD
     },
   },
   
-  // Role column (editable)
+  // Role column (read-only for now)
   {
     accessorKey: "role",
     header: ({ column }) => {
@@ -98,26 +92,39 @@ export const createColumns = ({ onRoleChange, onDelete }: ColumnsProps): ColumnD
       )
     },
     cell: ({ row }) => {
-      const user = row.original
       const role = row.getValue("role") as User["role"]
-      
+      return <div className="capitalize">{role}</div>
+    },
+  },
+  
+  // Status column
+  {
+    accessorKey: "status",
+    header: ({ column }) => {
       return (
-        <Select
-          value={role}
-          onValueChange={(value: User["role"]) => {
-            onRoleChange(user.id, value)
-          }}
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="-ml-4"
         >
-          <SelectTrigger className="w-[140px]" onClick={(e) => e.stopPropagation()}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="owner">Owner</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="teacher">Teacher</SelectItem>
-            <SelectItem value="student">Student</SelectItem>
-          </SelectContent>
-        </Select>
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
+    cell: ({ row }) => {
+      const status = (row.getValue("status") as "pending" | "active" | undefined) ?? "active"
+      return (
+        <Badge
+          variant={status === "active" ? "default" : "secondary"}
+          className={
+            status === "pending"
+              ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100"
+              : ""
+          }
+        >
+          {status === "pending" ? "Pending" : "Active"}
+        </Badge>
       )
     },
   },
@@ -149,6 +156,9 @@ export const createColumns = ({ onRoleChange, onDelete }: ColumnsProps): ColumnD
     header: () => <div className="text-right">Actions</div>,
     cell: ({ row }) => {
       const user = row.original
+      if (!canManage) {
+        return <div className="text-right text-muted-foreground text-sm">—</div>
+      }
       return (
         <div className="text-right">
           <Button

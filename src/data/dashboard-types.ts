@@ -7,6 +7,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  status?: "pending" | "active";
   avatarUrl?: string;
   joinedAt: string;
 }

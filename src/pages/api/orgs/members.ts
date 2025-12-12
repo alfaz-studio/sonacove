@@ -186,6 +186,8 @@ async function removeMember({ request, locals }: Parameters<APIRoute>[0]) {
       .select({
         memberId: organizationMembers.id,
         userId: organizationMembers.userId,
+        kcUserId: organizationMembers.kcUserId,
+        status: organizationMembers.status,
       })
       .from(organizationMembers)
       .where(
@@ -200,22 +202,28 @@ async function removeMember({ request, locals }: Parameters<APIRoute>[0]) {
       return jsonError("User is not part of this organization", 404);
     }
 
+    const member = targetMembership[0];
+
     // Prevent removing self as sole owner
     if (targetDb.id === callerDb.id) {
       return jsonError("Owners cannot remove themselves", 400);
     }
 
-    const kcTarget = await keycloakClient.getUser(targetEmail);
-    if (kcTarget?.id) {
-      await keycloakClient.removeMemberFromOrganization(
-        membership.kcOrgId,
-        kcTarget.id,
-      );
+    // Remove from Keycloak if they have a KC user ID and are active
+    if (member.kcUserId && member.status === "active") {
+      const kcTarget = await keycloakClient.getUser(targetEmail);
+      if (kcTarget?.id) {
+        await keycloakClient.removeMemberFromOrganization(
+          membership.kcOrgId,
+          kcTarget.id,
+        );
+      }
     }
 
+    // Remove from DB (works for both pending and active)
     await db
       .delete(organizationMembers)
-      .where(eq(organizationMembers.id, targetMembership[0].memberId));
+      .where(eq(organizationMembers.id, member.memberId));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

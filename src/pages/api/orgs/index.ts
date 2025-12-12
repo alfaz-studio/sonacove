@@ -121,6 +121,8 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
       orgId: orgRow.id,
       userId,
       role: "owner",
+      status: "active",
+      kcUserId: kcUser.id,
     });
 
     // Add member in Keycloak (owner)

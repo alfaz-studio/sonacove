@@ -13,13 +13,6 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Label } from '../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 import { Plus, Search, X, Settings2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -50,6 +43,9 @@ type OrgMemberResponse = {
   userId: number;
   email: string;
   role: Role;
+  status?: "pending" | "active";
+  invitedEmail?: string;
+  invitedAt?: string;
   joinedAt: string;
 };
 
@@ -65,10 +61,10 @@ type OrgResponse = {
 };
 
 interface UsersViewProps {
-  user: User;
+  user?: User;
 }
 
-const UsersView: React.FC<UsersViewProps> = ({ user }) => {
+const UsersView: React.FC<UsersViewProps> = () => {
   const { isLoggedIn, getAccessToken } = useAuth();
 
   if (!isLoggedIn) {
@@ -88,7 +84,8 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<Role>('teacher');
+  const [newUserFirstName, setNewUserFirstName] = useState('');
+  const [newUserLastName, setNewUserLastName] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -122,6 +119,7 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
           name: m.email.split('@')[0],
           email: m.email,
           role: m.role,
+          status: m.status ?? 'active',
           joinedAt: m.joinedAt?.split('T')[0] ?? '',
         }));
         setOrgMembers(members);
@@ -139,14 +137,17 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRoleChange = (userId: string, newRole: Role) => {
+  const handleRoleChange = (_userId: string, _newRole: Role) => {
     // Role edits are not supported yet; keep placeholder for future roles.
     showPopup('Role updates are not available yet', 'info');
   };
 
   const handleDeleteClick = (userId: string) => {
-    setUserToDelete(userId);
-    setIsDeleteDialogOpen(true);
+    const user = orgMembers.find((u) => u.id === userId);
+    if (user) {
+      setUserToDelete(user.email);
+      setIsDeleteDialogOpen(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -163,14 +164,16 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
         body: JSON.stringify({ email: userToDelete }),
       });
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Failed to remove user');
+        const data = (await res.json().catch(() => ({ error: 'Failed to remove user' }))) as { error?: string };
+        const errorMsg = data.error || 'Failed to remove user';
+        throw new Error(errorMsg);
       }
       showPopup('User removed successfully', 'success');
       await fetchOrg();
     } catch (e) {
       console.error(e);
-      showPopup('Failed to remove user', 'error');
+      const errorMsg = e instanceof Error ? e.message : 'Failed to remove user';
+      showPopup(errorMsg, 'error');
     } finally {
       setUserToDelete(null);
       setIsDeleteDialogOpen(false);
@@ -191,7 +194,7 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
     }
 
     try {
-      const res = await fetch('/api/orgs/members', {
+      const res = await fetch('/api/orgs/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,23 +202,28 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
         },
         body: JSON.stringify({
           email: newUserEmail,
-          role: newUserRole,
+          firstName: newUserFirstName || undefined,
+          lastName: newUserLastName || undefined,
         }),
       });
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Failed to add user');
+        const data = (await res.json().catch(() => ({ error: 'Failed to invite user' }))) as { error?: string };
+        const errorMsg = data.error || 'Failed to invite user';
+        throw new Error(errorMsg);
       }
-      showPopup(`Added ${newUserEmail} to the organization`, 'success');
+      showPopup(`Invitation sent to ${newUserEmail}`, 'success');
       await fetchOrg();
     } catch (e) {
       console.error(e);
-      showPopup('Failed to add user', 'error');
+      const errorMsg = e instanceof Error ? e.message : 'Failed to invite user';
+      showPopup(errorMsg, 'error');
+      setEmailError(errorMsg);
     }
     
     // Reset form
     setNewUserEmail('');
-    setNewUserRole('teacher');
+    setNewUserFirstName('');
+    setNewUserLastName('');
     setEmailError(null);
     setIsAddUserOpen(false);
   };
@@ -223,6 +231,7 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
   const columns = createColumns({
     onRoleChange: handleRoleChange,
     onDelete: handleDeleteClick,
+    canManage: orgMeta?.role === 'owner',
   });
 
   // Create table instance for ColumnToggle
@@ -240,6 +249,7 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
     select: "Select",
     name: "User",
     role: "Role",
+    status: "Status",
     joinedAt: "Joined Date",
     actions: "Actions",
   };
@@ -308,12 +318,12 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
         <div>
           <h2 className="text-xl font-semibold">{orgMeta.name} Members</h2>
           <p className="text-sm text-muted-foreground">
-            Manage users in your organization. Everyone is a teacher for now.
+            Manage users in your organization. Invited users will appear as "Pending" until they accept.
           </p>
         </div>
         {orgMeta.role === 'owner' && (
           <Button className="gap-2 bg-primary-500 text-white hover:bg-primary-600" onClick={() => setIsAddUserOpen(true)}>
-            <Plus className="h-4 w-4" /> Add User
+            <Plus className="h-4 w-4" /> Invite User
           </Button>
         )}
       </div>
@@ -384,14 +394,14 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
       <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New User</DialogTitle>
+            <DialogTitle>Invite User</DialogTitle>
             <DialogDescription>
-              Invite a new member to your organization. They will receive an email to set up their account.
+              Invite a new member to your organization. They will receive an email invitation to join.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">Email address *</Label>
               <Input
                 id="email"
                 placeholder="colleague@school.org"
@@ -407,23 +417,30 @@ const UsersView: React.FC<UsersViewProps> = ({ user }) => {
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="role">Role</Label>
-              <Select value={newUserRole} onValueChange={(value: Role) => setNewUserRole(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="firstName">First name (optional)</Label>
+              <Input
+                id="firstName"
+                placeholder="John"
+                value={newUserFirstName}
+                onChange={(e) => setNewUserFirstName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lastName">Last name (optional)</Label>
+              <Input
+                id="lastName"
+                placeholder="Doe"
+                value={newUserLastName}
+                onChange={(e) => setNewUserLastName(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button className="bg-gray-100 text-black border border-gray-200 hover:bg-gray-200" variant="outline" onClick={() => {
               setIsAddUserOpen(false);
               setNewUserEmail('');
+              setNewUserFirstName('');
+              setNewUserLastName('');
               setEmailError(null);
             }}>
               Cancel

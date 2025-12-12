@@ -70,17 +70,66 @@ const meHandler: APIRoute = async ({ request, locals }) => {
     const org = membership[0];
 
     // Fetch members list from DB
-    const members = await db
+    const dbMembers = await db
       .select({
         id: organizationMembers.id,
         userId: users.id,
         email: users.email,
         role: organizationMembers.role,
+        status: organizationMembers.status,
+        kcUserId: organizationMembers.kcUserId,
+        invitedEmail: organizationMembers.invitedEmail,
+        invitedAt: organizationMembers.invitedAt,
         joinedAt: organizationMembers.joinedAt,
       })
       .from(organizationMembers)
       .innerJoin(users, eq(organizationMembers.userId, users.id))
       .where(eq(organizationMembers.orgId, org.orgId));
+
+    // Reconcile with Keycloak: check if pending members are now active in KC
+    const kcMembers = await keycloakClient.getOrganizationMembers(org.kcOrgId);
+    const kcMemberIds = new Set(kcMembers.map((m) => m.id));
+    const kcMemberEmails = new Set(kcMembers.map((m) => m.email?.toLowerCase()).filter(Boolean));
+
+    // Update pending members to active if they're in KC (by ID or email)
+    for (const member of dbMembers) {
+      if (member.status === "pending") {
+        const isInKc =
+          (member.kcUserId && kcMemberIds.has(member.kcUserId)) ||
+          (member.email && kcMemberEmails.has(member.email.toLowerCase()));
+        
+        if (isInKc) {
+          // Update kcUserId if we have it from KC
+          const kcMember = kcMembers.find(
+            (m) => m.id === member.kcUserId || m.email?.toLowerCase() === member.email?.toLowerCase()
+          );
+          
+          await db
+            .update(organizationMembers)
+            .set({
+              status: "active",
+              kcUserId: kcMember?.id ?? member.kcUserId,
+            })
+            .where(eq(organizationMembers.id, member.id));
+          member.status = "active";
+          if (kcMember?.id) {
+            member.kcUserId = kcMember.id;
+          }
+        }
+      }
+    }
+
+    // Format members for response
+    const members = dbMembers.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      email: m.email,
+      role: m.role,
+      status: m.status,
+      invitedEmail: m.invitedEmail,
+      invitedAt: m.invitedAt?.toISOString(),
+      joinedAt: m.joinedAt?.toISOString(),
+    }));
 
     return new Response(
       JSON.stringify({
