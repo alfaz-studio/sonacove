@@ -1,6 +1,5 @@
 import type { APIContext, APIRoute } from "astro";
 import { PUBLIC_CF_ENV } from "astro:env/client";
-import { GRAFANA_API_KEY, GRAFANA_USERNAME } from "astro:env/server";
 import pino from "pino";
 
 // Global log collection
@@ -80,8 +79,10 @@ export async function logWrapper(context: APIContext, next: APIRoute) {
 
   if (waitUntil && !flushScheduled) {
     flushScheduled = true;
+    // Get env vars from Cloudflare runtime (available at runtime, not during build)
+    const env = context.locals.runtime.env;
     waitUntil(
-      flushLogs().finally(() => {
+      flushLogs(env?.GRAFANA_USERNAME, env?.GRAFANA_API_KEY).finally(() => {
         flushScheduled = false;
       })
     );
@@ -116,8 +117,10 @@ export function createConsoleLogger(name?: string) {
 
 /**
  * Send all pending logs to the OpenTelemetry collector
+ * @param grafanaUsername - Grafana username from environment (passed from runtime context)
+ * @param grafanaApiKey - Grafana API key from environment (passed from runtime context)
  */
-async function flushLogs(): Promise<void> {
+async function flushLogs(grafanaUsername?: string, grafanaApiKey?: string): Promise<void> {
   // Wait a small amount of time for any final logs
   await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -125,6 +128,11 @@ async function flushLogs(): Promise<void> {
 
   const logsToSend = [...pendingLogs];
   pendingLogs = [];
+
+  // Skip if credentials are not available (e.g., during build or on client)
+  if (!grafanaUsername || !grafanaApiKey) {
+    return;
+  }
 
   try {
     // Format logs for OpenTelemetry
@@ -139,7 +147,7 @@ async function flushLogs(): Promise<void> {
         body: message,
         attributes: {
           "service.name": "cf-worker" + PUBLIC_CF_ENV === 'staging' ? "-staj" : "",
-          ...(logEntry.bindings?.[0] || {}), // Include child logger context from stored bindings
+          ...logEntry.bindings?.[0], // Include child logger context from stored bindings
         },
       };
     });
@@ -153,7 +161,7 @@ async function flushLogs(): Promise<void> {
           "Content-Type": "application/json",
           Authorization:
             "Basic " +
-            btoa(`${GRAFANA_USERNAME}:${GRAFANA_API_KEY}`),
+            btoa(`${grafanaUsername}:${grafanaApiKey}`),
         },
         body: JSON.stringify({
           resourceLogs: [
@@ -230,8 +238,8 @@ function getCallerFile(): string {
         }
       }
     }
-  } catch (e) {
-    // Ignore errors in stack parsing
+  } catch {
+    // Fallback to "unknown"
   }
   return "unknown";
 }
