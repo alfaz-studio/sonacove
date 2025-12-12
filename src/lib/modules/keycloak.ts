@@ -292,12 +292,18 @@ export class KeycloakClient {
       if (!this.token) await this.fetchToken();
       if (!this.token) throw new Error("Failed to get Keycloak token");
 
+      // Keycloak requires at least one domain. We use "sonacove.com" as default
+      // since domains feature is not yet implemented for users.
+      const domains = params.domains && params.domains.length > 0
+        ? params.domains
+        : ["sonacove.com"];
+
       const payload = {
         name: params.name,
         alias: params.alias ?? params.name,
         enabled: params.enabled ?? true,
         description: params.description,
-        domains: (params.domains ?? []).map((d) => ({ name: d })),
+        domains: domains.map((d) => ({ name: d })),
       };
 
       const url = "https://" + PUBLIC_KC_HOSTNAME + orgsEndpoint;
@@ -311,8 +317,17 @@ export class KeycloakClient {
       });
 
       if (response.status !== 201 && response.status !== 204) {
-        const error = await response.text();
-        throw new Error(`Failed to create org: ${response.status} ${error}`);
+        const errorText = await response.text();
+        logger.error(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+            payload: payload,
+          },
+          "Failed to create Keycloak organization:",
+        );
+        throw new Error(`Failed to create org: ${response.status} ${errorText}`);
       }
 
       const location = response.headers.get("Location") ?? "";

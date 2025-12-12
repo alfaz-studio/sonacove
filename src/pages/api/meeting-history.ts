@@ -1,9 +1,8 @@
 import type { APIRoute } from "astro";
+import { validateAuth } from "../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
-import { KeycloakClient } from "../../lib/modules/keycloak";
-import { getEmailFromJWT } from "../../lib/modules/jwt";
 import { createDb } from "../../lib/db/drizzle";
-import { meetings, meetingEvents, users } from "../../lib/db/schema";
+import { meetings, meetingEvents } from "../../lib/db/schema";
 import { and, gte, lte, inArray } from "drizzle-orm";
 import type { MeetingMetaData } from "@/data/meeting-types";
 
@@ -21,40 +20,11 @@ export const GET: APIRoute = async (c) => {
  */
 const WorkerHandler: APIRoute = async ({ request, locals }) => {
   try {
-    // Extract Bearer token from Authorization header
-    const authHeader = request.headers.get("Authorization");
-    const bearerToken = authHeader?.replace("Bearer ", "");
-
-    if (!bearerToken) {
-      logger.error("Missing Authorization header");
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+    const auth = await validateAuth(request, locals.runtime);
+    if (auth.error) {
+      return auth.error;
     }
-
-    // Validate token using KeycloakClient
-    const keycloakClient = new KeycloakClient(locals.runtime);
-    const isValidToken = await keycloakClient.validateToken(bearerToken);
-
-    if (!isValidToken) {
-      logger.error("Invalid bearer token");
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract email from JWT token
-    const userEmail = getEmailFromJWT(bearerToken);
-
-    if (!userEmail) {
-      logger.error("Could not extract email from JWT token");
-      return new Response(JSON.stringify({ error: "Invalid token - no email found" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const { email: userEmail } = auth.result;
 
     // Parse query parameters for date range
     const url = new URL(request.url);
@@ -138,12 +108,17 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
     for (const meeting of meetingsList) {
       const events = eventsByMeeting.get(meeting.id) || [];
 
-      // Track unique participants (by email if available, otherwise by occupant_jid)
+      // Track unique participants (by email if available, otherwise by guest name)
       const participantsSet = new Set<string>();
       const participantMap = new Map<string, { email: string | null; name: string | null }>();
 
-      // Track unique hosts
+      // Track unique hosts (by email) and their names
       const hostsSet = new Set<string>();
+      const hostNameMap = new Map<string, string | null>();
+
+      // Track guests separately for naming (Guest 1, Guest 2, etc.)
+      const guestCounter = new Map<string, number>(); // Maps occupant_jid to guest number
+      let guestNumber = 0;
 
       // Process events to extract participants and hosts
       for (const event of events) {
@@ -155,9 +130,37 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
           const email = occupant.email || null;
           const name = occupant.name || null;
           const occupantJid = occupant.occupant_jid || null;
+          const affiliation = occupant.affiliation || null;
+          const role = occupant.role || null;
 
-          // Use email as identifier if available, otherwise use occupant_jid or name
-          const identifier = email || occupantJid || name || null;
+          // Check if this occupant is a host (owner affiliation or moderator role)
+          const isHost = affiliation === "owner" || role === "moderator";
+          
+          if (isHost && email) {
+            // This is a host - add to hosts set and track their name
+            hostsSet.add(email);
+            if (name && !hostNameMap.has(email)) {
+              hostNameMap.set(email, name);
+            }
+          }
+
+          // Determine participant identifier
+          let identifier: string | null = null;
+          if (email) {
+            // Authenticated user - use email
+            identifier = email;
+          } else if (occupantJid) {
+            // Guest - assign friendly name
+            if (!guestCounter.has(occupantJid)) {
+              guestNumber++;
+              guestCounter.set(occupantJid, guestNumber);
+            }
+            identifier = `Guest ${guestCounter.get(occupantJid)}`;
+          } else if (name) {
+            // Fallback to name if no email or JID
+            identifier = name;
+          }
+
           if (identifier) {
             participantsSet.add(identifier);
             if (!participantMap.has(identifier)) {
@@ -166,9 +169,13 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        // Extract hosts from host_assigned events
+        // Extract hosts from host_assigned events (fallback)
         if (event.eventType === "host_assigned" && metadata?.email) {
           hostsSet.add(metadata.email);
+          // If we have a name in metadata, use it
+          if (metadata.name && !hostNameMap.has(metadata.email)) {
+            hostNameMap.set(metadata.email, metadata.name);
+          }
         }
       }
 
@@ -189,30 +196,16 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       const hostsArray = Array.from(hostsSet).filter((e): e is string => e !== null && e !== undefined);
       const firstHostEmail = hostsArray[0] || null;
 
-      // Query users table to get host names for emails that exist in the database
+      // Build host names array - use names from events if available, otherwise fall back to email prefix
       const hostNamesArray: string[] = [];
       if (hostsArray.length > 0) {
-        const hostUsers = await db
-          .select({
-            email: users.email,
-          })
-          .from(users)
-          .where(inArray(users.email, hostsArray));
-
-        const hostEmailsInDb = new Set(hostUsers.map(u => u.email));
-
-        // Build host names array - use email prefix for users not in DB (guests)
         for (const hostEmail of hostsArray) {
-          if (hostEmailsInDb.has(hostEmail)) {
-            // For registered users, we could query their name, but for now use email prefix
-            const namePart = hostEmail.split("@")[0];
-            hostNamesArray.push(
-              namePart.split(".").map(part => 
-                part.charAt(0).toUpperCase() + part.slice(1)
-              ).join(" ")
-            );
+          // First try to use the name we extracted from events
+          const extractedName = hostNameMap.get(hostEmail);
+          if (extractedName) {
+            hostNamesArray.push(extractedName);
           } else {
-            // Guest host - use email prefix
+            // Fall back to formatting email prefix
             const namePart = hostEmail.split("@")[0];
             hostNamesArray.push(
               namePart.split(".").map(part => 
@@ -225,8 +218,18 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
       const hostName = hostNamesArray[0] || (firstHostEmail ? firstHostEmail.split("@")[0] : "Unknown");
 
-      // Build participants array (emails when available, otherwise identifiers)
+      // Build participants array (emails when available, otherwise guest names)
       const participantsArray = Array.from(participantsSet);
+
+      // Check if user participated in this meeting (as host or participant)
+      const userParticipated = 
+        hostsArray.includes(userEmail) || 
+        participantsArray.includes(userEmail);
+
+      // Only include meetings where the user participated
+      if (!userParticipated) {
+        continue;
+      }
 
       // Build meeting metadata
       const meetingMetaData: MeetingMetaData = {

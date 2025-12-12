@@ -156,28 +156,13 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
     }
   }, [dateRange])
 
-  // Get base meetings filtered by role (this is the base dataset for both analytics and table)
+  // Get base meetings (API already filters by participant, so all returned meetings are relevant)
   // This must be defined before the table instance
   const baseMeetings = useMemo(() => {
     // Cast the API response to MeetingMetaData[]
-    let result: MeetingMetaData[] = (meetingsData as MeetingMetaData[]) || [];
-
-    // Apply role-based filtering
-    if (user.role === 'teacher') {
-      result = result.filter(m => {
-        // Check if user is in hosts array or email field (for backward compatibility)
-        const hosts = m.hosts || (m.email ? [m.email] : []);
-        return hosts.includes(user.email);
-      });
-    } else if (user.role === 'student') {
-      result = result.filter(m => 
-        m.participants.some((p: string) => p === user.email)
-      );
-    }
-    // Owner and admin see all meetings
-
-    return result;
-  }, [meetingsData, user]);
+    // API now filters to only return meetings where user was a participant
+    return (meetingsData as MeetingMetaData[]) || [];
+  }, [meetingsData]);
 
   // Create table instance for ColumnToggle
   const table = useReactTable({
@@ -325,14 +310,14 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
       if (!dailyData[dayKey]) {
         dailyData[dayKey] = 0;
       }
-      dailyData[dayKey] += meeting.participantCount;
+      dailyData[dayKey] += 1;
     });
 
     // Convert to array and sort by date
     const chartData = Object.entries(dailyData)
-      .map(([date, participants]) => ({
+      .map(([date, meetings]) => ({
         date,
-        participants,
+        meetings,
         displayDate: format(new Date(date), 'MMM d'),
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
@@ -347,8 +332,8 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
   }, [filteredMeetings]);
 
   const chartConfig = {
-    participants: {
-      label: "Participants",
+    meetings: {
+      label: "Meetings",
       color: "#f05023",
     },
   };
@@ -435,7 +420,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
         <Card className="bg-white shadow-sm border-accent-200">
           <CardHeader>
             <CardTitle className="text-gray-900">Meeting Activity</CardTitle>
-            <CardDescription>Total participants per day over the selected time period.</CardDescription>
+            <CardDescription>Total meetings per day over the selected time period.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
@@ -461,7 +446,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
-                  dataKey="participants"
+                  dataKey="meetings"
                   stroke="#f05023"
                   strokeWidth={2}
                   dot={{ r: 4 }}

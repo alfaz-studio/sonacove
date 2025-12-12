@@ -131,15 +131,27 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
       const hostNames = meeting.hostNames || (meeting.hostName ? [meeting.hostName] : [])
       
       // Extract names from email addresses if hostNames not available
-      const displayNames = hostNames.length > 0 
-        ? hostNames 
-        : hosts.map(email => {
-            if (!email) return "Guest"
-            const namePart = email.split("@")[0]
-            return namePart.split(".").map(part => 
-              part.charAt(0).toUpperCase() + part.slice(1)
-            ).join(" ")
-          })
+      let displayNames: string[] = []
+      if (hostNames.length > 0) {
+        displayNames = hostNames
+      } else if (hosts.length > 0) {
+        displayNames = hosts.map(email => {
+          if (!email) return "Guest"
+          const namePart = email.split("@")[0]
+          return namePart.split(".").map(part => 
+            part.charAt(0).toUpperCase() + part.slice(1)
+          ).join(" ")
+        })
+      } else if (meeting.hostName) {
+        // Fallback to hostName field when arrays are empty
+        displayNames = [meeting.hostName]
+      } else if (meeting.email) {
+        // Final fallback to email field
+        const namePart = meeting.email.split("@")[0]
+        displayNames = [namePart.split(".").map(part => 
+          part.charAt(0).toUpperCase() + part.slice(1)
+        ).join(" ")]
+      }
       
       // Show first 2 names, then "and X more"
       const maxVisible = 2
@@ -242,19 +254,17 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
       const count = row.getValue("participantCount") as number
       const participants = row.original.participants
       
-      // Extract names from email addresses or use identifier as-is for guests
+      // Extract names from email addresses or use identifier as-is (guests are already named "Guest 1", etc.)
       const participantNames = participants.map(identifier => {
         // Check if it's an email address
-        if (identifier.includes("@")) {
+        if (identifier.includes("@") && !identifier.startsWith("Guest")) {
           const namePart = identifier.split("@")[0]
           return namePart.split(".").map(part => 
             part.charAt(0).toUpperCase() + part.slice(1)
           ).join(" ")
         }
-        // For guests (non-email identifiers), use as-is or format if it looks like a JID
-        return identifier.includes("@") && identifier.includes(".") 
-          ? identifier.split("@")[0] 
-          : identifier
+        // For guests or other identifiers, use as-is (guests are already "Guest 1", "Guest 2", etc.)
+        return identifier
       })
       
       // Show first 3 names, then "and X more"

@@ -6,8 +6,7 @@ import {
   organizations,
   users,
 } from "../../../lib/db/schema";
-import { getEmailFromJWT } from "../../../lib/modules/jwt";
-import { KeycloakClient } from "../../../lib/modules/keycloak";
+import { validateAuth } from "../../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
 
 export const prerender = false;
@@ -18,19 +17,11 @@ export const DELETE: APIRoute = async (ctx) => logWrapper(ctx, removeMember);
 
 async function addMember({ request, locals }: Parameters<APIRoute>[0]) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    const bearerToken = authHeader?.replace("Bearer ", "");
-    if (!bearerToken) return jsonError("Missing Authorization header", 401);
-
-    const email = getEmailFromJWT(bearerToken);
-    if (!email) return jsonError("Invalid token - no email", 401);
-
-    const keycloakClient = new KeycloakClient(locals.runtime);
-    const isValidToken = await keycloakClient.validateToken(bearerToken);
-    if (!isValidToken) return jsonError("Invalid token", 401);
-
-    const kcCaller = await keycloakClient.getUser(email);
-    if (!kcCaller?.id) return jsonError("Keycloak user not found", 404);
+    const auth = await validateAuth(request, locals.runtime);
+    if (auth.error) {
+      return auth.error;
+    }
+    const { email, keycloakClient } = auth.result;
 
     const body = (await request.json().catch(() => null)) as
       | { email?: string }
@@ -129,16 +120,11 @@ async function addMember({ request, locals }: Parameters<APIRoute>[0]) {
 
 async function removeMember({ request, locals }: Parameters<APIRoute>[0]) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    const bearerToken = authHeader?.replace("Bearer ", "");
-    if (!bearerToken) return jsonError("Missing Authorization header", 401);
-
-    const email = getEmailFromJWT(bearerToken);
-    if (!email) return jsonError("Invalid token - no email", 401);
-
-    const keycloakClient = new KeycloakClient(locals.runtime);
-    const isValidToken = await keycloakClient.validateToken(bearerToken);
-    if (!isValidToken) return jsonError("Invalid token", 401);
+    const auth = await validateAuth(request, locals.runtime);
+    if (auth.error) {
+      return auth.error;
+    }
+    const { email, keycloakClient } = auth.result;
 
     const body = (await request.json().catch(() => null)) as
       | { email?: string }

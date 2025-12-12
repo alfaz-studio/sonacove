@@ -1,7 +1,5 @@
-"use client"
-
 import React, { useMemo } from 'react';
-import { Clock, Calendar, BookmarkCheck } from 'lucide-react';
+import { Clock, BookmarkCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { isAfter } from 'date-fns';
 
@@ -49,7 +47,7 @@ const OverviewStats: React.FC<OverviewStatsProps> = ({ meetings, totalMinutes, m
             <span className="text-xs font-semibold uppercase tracking-wider">Total Hosted</span>
           </div>
           <div>
-            <span className="text-2xl font-bold text-gray-900">{stats.minutes}m</span>
+            <span className="text-2xl font-bold text-gray-900">{stats.minutes}</span>
             <p className="text-xs text-gray-500 mt-1">Minutes used</p>
           </div>
         </CardContent>
