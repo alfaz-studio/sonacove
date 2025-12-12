@@ -32,8 +32,10 @@ async function addMember({ request, locals }: Parameters<APIRoute>[0]) {
     const kcCaller = await keycloakClient.getUser(email);
     if (!kcCaller?.id) return jsonError("Keycloak user not found", 404);
 
-    const body = await request.json().catch(() => null);
-    const targetEmail = body?.email as string | undefined;
+    const body = (await request.json().catch(() => null)) as
+      | { email?: string }
+      | null;
+    const targetEmail = body?.email;
     if (!targetEmail) return jsonError("Missing required field: email", 400);
 
     const db = createDb();
@@ -138,8 +140,10 @@ async function removeMember({ request, locals }: Parameters<APIRoute>[0]) {
     const isValidToken = await keycloakClient.validateToken(bearerToken);
     if (!isValidToken) return jsonError("Invalid token", 401);
 
-    const body = await request.json().catch(() => null);
-    const targetEmail = body?.email as string | undefined;
+    const body = (await request.json().catch(() => null)) as
+      | { email?: string }
+      | null;
+    const targetEmail = body?.email;
     if (!targetEmail) return jsonError("Missing required field: email", 400);
 
     const db = createDb();

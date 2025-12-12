@@ -1,5 +1,5 @@
 import React from 'react';
-import type { User } from '../../data/mock-dashboard';
+import type { User } from '@/data/dashboard-types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';

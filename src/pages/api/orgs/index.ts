@@ -41,10 +41,17 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
       return jsonError("Keycloak user not found", 404);
     }
 
-    const body = await request.json().catch(() => null);
-    const name = body?.name as string | undefined;
-    const domains = (body?.domains as string[] | undefined)?.filter(Boolean);
-    const description = body?.description as string | undefined;
+    const body = (await request.json().catch(() => null)) as
+      | {
+          name?: string;
+          domains?: string[];
+          description?: string;
+          alias?: string;
+        }
+      | null;
+    const name = body?.name;
+    const domains = body?.domains?.filter(Boolean);
+    const description = body?.description;
 
     if (!name) {
       return jsonError("Missing required field: name", 400);

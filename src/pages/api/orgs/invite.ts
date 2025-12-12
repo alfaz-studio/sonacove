@@ -39,10 +39,16 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
       return jsonError("Keycloak user not found", 404);
     }
 
-    const body = await request.json().catch(() => null);
-    const inviteEmail = body?.email as string | undefined;
-    const firstName = body?.firstName as string | undefined;
-    const lastName = body?.lastName as string | undefined;
+    const body = (await request.json().catch(() => null)) as
+      | {
+          email?: string;
+          firstName?: string;
+          lastName?: string;
+        }
+      | null;
+    const inviteEmail = body?.email;
+    const firstName = body?.firstName;
+    const lastName = body?.lastName;
 
     if (!inviteEmail || !inviteEmail.includes("@")) {
       return jsonError("Missing or invalid email address", 400);

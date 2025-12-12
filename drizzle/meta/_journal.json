@@ -29,6 +29,13 @@
       "when": 1768500000000,
       "tag": "0003_organizations_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765538311315,
+      "tag": "0004_sour_longshot",
+      "breakpoints": true
     }
   ]
 }
