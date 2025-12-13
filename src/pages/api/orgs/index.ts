@@ -29,13 +29,19 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
           name?: string;
           description?: string;
           alias?: string;
+          domain?: string;
         }
       | null;
     const name = body?.name;
     const description = body?.description;
+    const domain = body?.domain;
 
     if (!name) {
       return jsonError("Missing required field: name", 400);
+    }
+
+    if (!domain) {
+      return jsonError("Missing required field: domain", 400);
     }
 
     const db = createDb();
@@ -77,11 +83,11 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
     }
 
     // Create org in Keycloak
-    // Note: domains are not user-provided yet, so createOrganization() will use default "sonacove.com"
     const orgResult = await keycloakClient.createOrganization({
       name,
       alias: body?.alias,
       description,
+      domains: [domain],
     });
 
     if (!orgResult?.id) {

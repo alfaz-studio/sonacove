@@ -90,6 +90,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [orgName, setOrgName] = useState('');
+  const [orgDomain, setOrgDomain] = useState('');
 
   const fetchOrg = async () => {
     const token = getAccessToken?.();
@@ -269,19 +270,44 @@ const UsersView: React.FC<UsersViewProps> = () => {
           <p className="text-muted-foreground text-sm">
             Create an organization to start adding members.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <Input
-              placeholder="Organization name"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="flex flex-col gap-4 max-w-md">
+            <div className="grid gap-2">
+              <Label htmlFor="orgName">Organization name *</Label>
+              <Input
+                id="orgName"
+                placeholder="My Organization"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="orgDomain">Domain name *</Label>
+              <Input
+                id="orgDomain"
+                placeholder="example.com"
+                value={orgDomain}
+                onChange={(e) => setOrgDomain(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                The domain name must be unique and will be used to identify your organization.
+              </p>
+            </div>
             <Button
               onClick={async () => {
                 const token = getAccessToken?.();
                 if (!token) return;
                 if (!orgName.trim()) {
                   showPopup('Please enter an organization name', 'error');
+                  return;
+                }
+                if (!orgDomain.trim()) {
+                  showPopup('Please enter a domain name', 'error');
+                  return;
+                }
+                // Basic domain validation
+                const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i;
+                if (!domainRegex.test(orgDomain.trim())) {
+                  showPopup('Please enter a valid domain name (e.g., example.com)', 'error');
                   return;
                 }
                 try {
@@ -291,21 +317,27 @@ const UsersView: React.FC<UsersViewProps> = () => {
                       'Content-Type': 'application/json',
                       Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({ name: orgName.trim() }),
+                    body: JSON.stringify({ 
+                      name: orgName.trim(),
+                      domain: orgDomain.trim(),
+                    }),
                   });
                   if (!res.ok) {
-                    const msg = await res.text();
-                    throw new Error(msg || 'Failed to create organization');
+                    const errorData = (await res.json().catch(() => ({ error: 'Failed to create organization' }))) as { error?: string } | { error: string };
+                    const errorMsg = errorData.error || 'Failed to create organization';
+                    throw new Error(errorMsg);
                   }
                   showPopup('Organization created', 'success');
                   setOrgName('');
+                  setOrgDomain('');
                   await fetchOrg();
                 } catch (e) {
                   console.error(e);
-                  showPopup('Failed to create organization', 'error');
+                  const errorMsg = e instanceof Error ? e.message : 'Failed to create organization';
+                  showPopup(errorMsg, 'error');
                 }
               }}
-              className="bg-primary-500 text-white hover:bg-primary-600"
+              className="bg-primary-500 text-white hover:bg-primary-600 w-fit"
             >
               Create Organization
             </Button>
