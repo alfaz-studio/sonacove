@@ -146,8 +146,8 @@ const DeveloperView: React.FC = () => {
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
         <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <h3 className="text-sm font-semibold text-amber-900">Developer Tools - Coming Soon</h3>
-          <p className="text-sm text-amber-700 mt-1">
+          <h3 className="text-base font-semibold text-amber-900">Developer Tools - Coming Soon</h3>
+          <p className="text-base text-amber-700 mt-1">
             We are putting the finishing touches on our API and Webhook integrations. These features are currently disabled for preview purposes.
           </p>
         </div>
@@ -166,7 +166,7 @@ const DeveloperView: React.FC = () => {
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Code className="h-5 w-5" /> Embed in your application
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Copy the code snippet below and paste it into your HTML to embed Sonacove meetings.
           </p>
         </div>
@@ -178,7 +178,7 @@ const DeveloperView: React.FC = () => {
                   readOnly
                   disabled
                   value={embedCode}
-                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-none cursor-not-allowed text-muted-foreground"
+                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono resize-none cursor-not-allowed text-muted-foreground"
                   onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                 />
                 <Button
@@ -192,7 +192,7 @@ const DeveloperView: React.FC = () => {
                 </Button>
               </div>
               <div className="rounded-md border bg-muted p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   The embed script will automatically handle meeting initialization and participant management.
                   You can customize the <code className="px-1 py-0.5 bg-background rounded">roomId</code> and add additional configuration options as needed.
                 </p>
@@ -211,7 +211,7 @@ const DeveloperView: React.FC = () => {
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Key className="h-5 w-5" /> API Keys
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Use these keys to authenticate your requests to the Sonacove API.
             </p>
           </div>
@@ -231,13 +231,13 @@ const DeveloperView: React.FC = () => {
                   <div key={apiKey.id} className="flex items-center space-x-2">
                     <div className="grid flex-1 gap-2">
                       {apiKey.name && (
-                        <Label className="text-xs text-muted-foreground">{apiKey.name}</Label>
+                        <Label className="text-sm text-muted-foreground">{apiKey.name}</Label>
                       )}
                       <Input
                         value={apiKey.key}
                         readOnly
                         disabled
-                        className="font-mono text-xs cursor-not-allowed"
+                        className="font-mono text-sm cursor-not-allowed"
                       />
                     </div>
                     <Button
@@ -283,7 +283,7 @@ const DeveloperView: React.FC = () => {
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Webhook className="h-5 w-5" /> Webhooks
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Events sent to your endpoints.
             </p>
           </div>
@@ -310,7 +310,7 @@ const DeveloperView: React.FC = () => {
                 <TableBody>
                   {webhooks.map((webhook) => (
                     <TableRow key={webhook.id}>
-                      <TableCell className="font-mono text-xs">
+                      <TableCell className="font-mono text-sm">
                         {webhook.url}
                       </TableCell>
                       <TableCell>
@@ -422,7 +422,7 @@ const DeveloperView: React.FC = () => {
                 value={newApiKeyName}
                 onChange={(e) => setNewApiKeyName(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Give your API key a descriptive name to help you identify it later.
               </p>
             </div>

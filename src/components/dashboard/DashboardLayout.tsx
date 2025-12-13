@@ -143,24 +143,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         onClose={hidePopup}
       />
       <SidebarProvider defaultOpen={true}>
-      <Sidebar collapsible="icon" className="border-r">      
+      <Sidebar collapsible="offcanvas" className="border-r">      
         {/* Logo Header */}
-        <SidebarHeader className="p-4 border-b border-sidebar-border h-16 flex justify-center">
-          <div className="flex items-center justify-between w-full group-data-[collapsible=icon]:justify-center">
-              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden overflow-hidden transition-all duration-300">
-                <img src={SonacoveLogo.src} alt="Sonacove" className="h-8 w-8 shrink-0" />
-                <span className="text-xl font-bold text-primary font-crimson whitespace-nowrap">
+        <SidebarHeader className="p-5 border-b border-sidebar-border h-20 flex justify-center">
+          <div className="flex items-center justify-between w-full">
+              <a href="/" className="flex items-center gap-2 overflow-hidden transition-all duration-300 hover:opacity-80">
+                <img src={SonacoveLogo.src} alt="Sonacove" className="h-10 w-10 shrink-0" />
+                <span className="text-3xl font-bold text-primary font-crimson whitespace-nowrap">
                   Sonacove
                 </span>
-              </div>
-              <div className="flex shrink-0">
-                <CustomSidebarTrigger />
-              </div>
+              </a>
             </div>
           </SidebarHeader>
 
         {/* Main Navigation */}
-      <SidebarContent className="flex flex-col h-full group-data-[collapsible=icon]:hidden">
+      <SidebarContent className="flex flex-col h-full">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -171,7 +168,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                       onClick={() => setActiveView(item.id as View)}
                       tooltip={item.label}
                     >
-                      <item.icon className="h-5 w-5" />
+                      <item.icon className="h-6 w-6" />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -195,7 +192,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                         onClick={() => setActiveView(item.id as View)}
                         tooltip={item.label}
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="h-6 w-6" />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -207,7 +204,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         </SidebarContent>
 
         {/* User Profile Footer or Sign In Button */}
-        <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
+        <SidebarFooter className="border-t border-sidebar-border">
           {activeUser ? (
             <SidebarMenu>
               <SidebarMenuItem>
@@ -217,13 +214,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                       size="lg"
                       className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
-                      <Avatar className="h-8 w-8 rounded-lg">
+                      <Avatar className="h-12 w-12 rounded-lg">
                         <AvatarImage src={activeUser.avatarUrl} alt={activeUser.name} />
-                        <AvatarFallback className="rounded-lg">{activeUser.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="rounded-lg text-lg">{activeUser.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
+                      <div className="grid flex-1 text-left text-lg leading-tight">
                         <span className="truncate font-semibold">{activeUser.name}</span>
-                        <span className="truncate text-xs text-muted-foreground capitalize">{activeUser.role}</span>
+                        <span className="truncate text-base text-muted-foreground capitalize">{activeUser.role}</span>
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
@@ -259,20 +256,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
 
       {/* Main Content */}
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
-        {activeUser && (
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-6">
+          <CustomSidebarTrigger />
+          {activeUser && (
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">
                 Merhaba, {activeUser.name.split(' ')[0]}
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-base text-gray-500">
                 Here's what's happening with your meetings.
               </p>
             </div>
-          </header>
-        )}
+          )}
+        </header>
 
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+        <main className="flex-1 overflow-y-auto p-6 bg-gray-50/50 text-xl">
           {activeView === 'overview' && <OverviewView />}
           {activeView === 'meetings' && (activeUser ? <MeetingsView user={activeUser} /> : <LoginRequired />)}
           {activeView === 'users' && (activeUser ? <UsersView user={activeUser} /> : <LoginRequired />)}

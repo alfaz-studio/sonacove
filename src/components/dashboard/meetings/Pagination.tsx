@@ -25,7 +25,7 @@ export function Pagination<TData>({ table }: PaginationProps<TData>) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
       {/* Row count and selection info */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 text-base text-muted-foreground">
         <span>
           {table.getFilteredSelectedRowModel().rows.length} of{" "}
           {table.getFilteredRowModel().rows.length} row(s) selected
@@ -41,7 +41,7 @@ export function Pagination<TData>({ table }: PaginationProps<TData>) {
       <div className="flex items-center gap-4">
         {/* Page size selector */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground hidden sm:inline">
+          <span className="text-base text-muted-foreground hidden sm:inline">
             Rows per page
           </span>
           <Select

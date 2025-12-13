@@ -28,14 +28,14 @@ const OverviewStats: React.FC<OverviewStatsProps> = ({ meetings, totalMinutes, m
         <CardContent className="p-4 flex flex-col justify-between h-full">
           <div className="flex items-center gap-2 text-primary-600 mb-2">
             <BookmarkCheck className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Bookings</span>
+            <span className="text-base font-semibold uppercase tracking-wider">Bookings</span>
           </div>
           <div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-primary-900">{stats.booked}</span>
-              <span className="text-sm font-medium text-primary-600">/ {maxBookings}</span>
+              <span className="text-3xl font-bold text-primary-900">{stats.booked}</span>
+              <span className="text-base font-medium text-primary-600">/ {maxBookings}</span>
             </div>
-            <p className="text-xs text-primary-700 mt-1">Slots used</p>
+            <p className="text-base text-primary-700 mt-1">Slots used</p>
           </div>
         </CardContent>
       </Card>
@@ -44,11 +44,11 @@ const OverviewStats: React.FC<OverviewStatsProps> = ({ meetings, totalMinutes, m
         <CardContent className="p-4 flex flex-col justify-between h-full">
           <div className="flex items-center gap-2 text-gray-500 mb-2">
             <Clock className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Hosted</span>
+            <span className="text-base font-semibold uppercase tracking-wider">Total Hosted</span>
           </div>
           <div>
-            <span className="text-2xl font-bold text-gray-900">{stats.minutes}</span>
-            <p className="text-xs text-gray-500 mt-1">Minutes used</p>
+            <span className="text-3xl font-bold text-gray-900">{stats.minutes}</span>
+            <p className="text-base text-gray-500 mt-1">Minutes used</p>
           </div>
         </CardContent>
       </Card>

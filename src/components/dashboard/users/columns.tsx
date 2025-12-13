@@ -67,7 +67,7 @@ export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): Co
           </Avatar>
           <div className="flex flex-col">
             <span className="font-medium">{user.name}</span>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Mail className="h-3 w-3" /> {user.email}
             </span>
           </div>
@@ -157,7 +157,7 @@ export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): Co
     cell: ({ row }) => {
       const user = row.original
       if (!canManage) {
-        return <div className="text-right text-muted-foreground text-sm">—</div>
+        return <div className="text-right text-muted-foreground text-base">—</div>
       }
       return (
         <div className="text-right">

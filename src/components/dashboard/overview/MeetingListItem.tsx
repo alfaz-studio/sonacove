@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { 
-  History, 
   AlertTriangle, 
   CircleCheck, 
   Trash2, 
@@ -36,7 +35,7 @@ const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past
   };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 mr-3 rounded-full border ${styles[status]}`}>
+    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold px-2.5 py-0.5 mr-3 rounded-full border ${styles[status]}`}>
       {icons[status]}
       {status}
     </span>
@@ -79,8 +78,8 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
       {/* Date Box */}
       <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-2 sm:gap-0 w-full sm:w-24 sm:min-w-[100px]">
         <div className="flex flex-row sm:flex-col gap-2 sm:gap-0 items-center sm:items-start">
-          <span className="text-sm font-semibold text-gray-900">{formattedDate}</span>
-          <span className="text-xs text-gray-500">{formattedTime}</span>
+          <span className="text-base font-semibold text-gray-900">{formattedDate}</span>
+          <span className="text-base text-gray-500">{formattedTime}</span>
         </div>
         <div className="sm:hidden">
           <MeetingStatusBadge status={status} />
@@ -90,7 +89,7 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
       {/* Info Section */}
       <div className="flex-1 min-w-0 w-full mb-2 sm:mb-0">
         <div className="flex items-center gap-2 mb-1">
-          <h4 className="text-base font-bold text-gray-900 truncate overflow-hidden max-w-full" title={meeting.title}>
+          <h4 className="text-lg font-bold text-gray-900 truncate overflow-hidden max-w-full" title={meeting.title}>
             {meeting.title}
           </h4>
           <div className="hidden sm:block">
@@ -98,18 +97,18 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
           </div>
         </div>
         {status === 'Past' ? (
-          <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Duration: {formatDurationMs(Number(meeting.duration))}
+          <p className="text-base text-gray-500 truncate flex items-center gap-1">
+            <Clock className="h-4 w-4" /> Duration: {formatDurationMs(Number(meeting.duration))}
           </p>
         ) : (
-          <p className="text-xs text-gray-500 truncate flex items-center gap-1 invisible">
+          <p className="text-sm text-gray-500 truncate flex items-center gap-1 invisible">
             <Clock className="h-3 w-3" /> Duration: 00:00
           </p>
         )}
       </div>
 
       {/*  Actions Section */}
-      <div className="flex items-center w-full sm:w-auto mt-2 pt-3 border-t border-gray-100 sm:border-0 sm:mt-0 sm:pt-0 sm:ml-auto gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+      <div className="flex items-center w-full sm:w-auto mt-2 pt-3 border-t border-gray-100 sm:border-0 sm:mt-0 sm:pt-0 sm:ml-auto gap-2 opacity-100">
         
         {/* Copy & Delete Group */}
         <div className="flex items-center gap-1">
@@ -148,7 +147,7 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
         <Button 
           size="sm" 
           asChild 
-          className="ml-auto mr-4 sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-8 text-xs font-semibold cursor-pointer shadow-none px-4"
+          className="ml-auto mr-4 sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-9 text-sm font-semibold cursor-pointer shadow-none px-4"
         >
           <a href={meetingUrl} className="flex items-center gap-2">
             Join

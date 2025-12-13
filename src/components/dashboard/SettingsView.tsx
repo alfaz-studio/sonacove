@@ -31,8 +31,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
         <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <h3 className="text-sm font-semibold text-blue-900">Account Management In Progress</h3>
-          <p className="text-sm text-blue-700 mt-1">
+          <h3 className="text-base font-semibold text-blue-900">Account Management In Progress</h3>
+          <p className="text-base text-blue-700 mt-1">
             Profile editing and preference settings are currently read-only. Check back soon for updates!
           </p>
         </div>
@@ -40,7 +40,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
 
       <div className="flex flex-col gap-2 opacity-75">
         <h2 className="text-xl font-semibold">Account Settings</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Manage your personal information and preferences.
         </p>
       </div>

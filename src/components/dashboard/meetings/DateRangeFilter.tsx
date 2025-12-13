@@ -196,7 +196,7 @@ export function DateRangeFilter({
         <div className="flex">
           {/* Presets sidebar */}
           <div className="border-r p-3 space-y-1 w-[140px]">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Quick Select</p>
+            <p className="text-sm font-medium text-muted-foreground mb-2">Quick Select</p>
             {presets.map((preset) => (
               <Button
                 key={preset.value}
@@ -204,7 +204,7 @@ export function DateRangeFilter({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "w-full justify-start text-sm hover:bg-primary-50 hover:text-primary-700", // Hover effect
+                  "w-full justify-start text-base hover:bg-primary-50 hover:text-primary-700", // Hover effect
                   selectedPreset === preset.value && "bg-primary-50 text-primary-700 font-medium" // Selected state
                 )}
                 onClick={() => handlePresetSelect(preset.value)}
@@ -233,7 +233,7 @@ export function DateRangeFilter({
             {/* Time inputs */}
             <div className="flex items-center gap-4 px-1">
               <div className="flex items-center gap-2">
-                <Label htmlFor="start-time" className="text-xs text-muted-foreground">
+                <Label htmlFor="start-time" className="text-sm text-muted-foreground">
                   Start time
                 </Label>
                 <Input
@@ -245,7 +245,7 @@ export function DateRangeFilter({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label htmlFor="end-time" className="text-xs text-muted-foreground">
+                <Label htmlFor="end-time" className="text-sm text-muted-foreground">
                   End time
                 </Label>
                 <Input

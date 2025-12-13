@@ -142,7 +142,7 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
   return (
     <Card className={`border-border shadow-sm bg-white ${!isLoggedIn ? 'h-full' : 'h-fit'}`}>
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-gray-900">Start a Meeting</CardTitle>
+        <CardTitle className="text-3xl font-bold text-gray-900">Start a Meeting</CardTitle>
         <CardDescription>Create a secure room instantly or schedule for later.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -191,20 +191,20 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
           <div className="pt-1">
             {isLoggedIn && isBookingLimitReached ? (
               // Case 1: Limit Reached
-              <div className="flex w-full justify-center items-center gap-2 text-xs tracking-wide text-amber-600 bg-amber-50 p-2 rounded-md">
-                <AlertCircle size={14} />
+              <div className="flex w-full justify-center items-center gap-2 text-base tracking-wide text-amber-600 bg-amber-50 p-2 rounded-md">
+                <AlertCircle size={16} />
                 <span>Booking limit reached ({maxBookings}/{maxBookings}).</span>
               </div>
             ) : !isLoggedIn ? (
               // Case 2: Not Logged In
-              <div className="flex w-full justify-center items-center gap-2 text-xs tracking-wide text-gray-500 bg-gray-50 p-2 rounded-md">
-                <Lock size={14} />
+              <div className="flex w-full justify-center items-center gap-2 text-base tracking-wide text-gray-500 bg-gray-50 p-2 rounded-md">
+                <Lock size={16} />
                 <span>Login required to book meetings.</span>
               </div>
             ) : (
               // Case 3: All Good (Default State)
-              <div className="flex items-start gap-2 text-xs text-muted-foreground px-1">
-                <Info size={14} className="shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 text-base text-muted-foreground px-1">
+                <Info size={16} className="shrink-0 mt-0.5" />
                 <span>Enter a unique name to create a secure room instantly.</span>
               </div>
             )}

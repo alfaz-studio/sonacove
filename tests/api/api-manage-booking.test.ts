@@ -188,6 +188,40 @@ describe("API: /api/manage-booking", () => {
   });
 
   it("should create booking with valid request", async () => {
+    // First, ensure we have a free slot by deleting all existing bookings for this user
+    // This ensures the test can run even if a previous test run left bookings
+    try {
+      const dbUserEndpoint = apiEndpoint.replace('/manage-booking', '/db-user');
+      const userResponse = await fetch(dbUserEndpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json() as { bookedRooms: Array<{ roomName: string }> };
+        // Delete all existing bookings to free up slots
+        for (const booking of userData.bookedRooms || []) {
+          try {
+            await fetch(apiEndpoint, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                roomName: booking.roomName
+              }),
+            });
+          } catch (e) {
+            // Ignore individual delete errors
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore errors during cleanup
+    }
+    
     const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: {
@@ -218,13 +252,17 @@ describe("API: /api/manage-booking", () => {
   });
 
   it("should fail to create booking when no free slots", async () => {
+    // This test assumes the user already has maxBookings bookings
+    // Use a different room name to avoid conflicts
+    const noSlotsRoomName = `no-slots-room-${Date.now()}`;
+    
     const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
-        roomName: testRoomName,
+        roomName: noSlotsRoomName,
         password: "test123",
         lobby: false,
         maxOccupants: 50,

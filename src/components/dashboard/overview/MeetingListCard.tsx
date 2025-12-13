@@ -30,8 +30,8 @@ const EmptyState = ({ type }: { type: 'upcoming' | 'past' }) => (
     <div className="h-16 w-16 bg-primary-50 rounded-full flex items-center justify-center mb-4">
       {type === 'upcoming' ? <CalendarIcon className="h-8 w-8 text-primary-300" /> : <History className="h-8 w-8 text-primary-300" />}
     </div>
-    <h3 className="text-lg font-semibold text-gray-900">No {type} meetings</h3>
-    <p className="text-sm text-gray-500 max-w-xs mx-auto">
+    <h3 className="text-xl font-semibold text-gray-900">No {type} meetings</h3>
+    <p className="text-base text-gray-500 max-w-xs mx-auto">
       {type === 'upcoming' 
         ? "You don't have any upcoming sessions scheduled." 
         : "You haven't attended any meetings yet."}
@@ -56,7 +56,7 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
     <Card className="border-border shadow-sm h-full flex flex-col bg-white">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-bold text-gray-900">My Meetings</CardTitle>
+          <CardTitle className="text-2xl font-bold text-gray-900">My Meetings</CardTitle>
         </div>
         <CardDescription>Manage your scheduled and past sessions.</CardDescription>
       </CardHeader>
@@ -67,8 +67,8 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
             <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
               <Lock className="h-8 w-8 text-gray-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Login Required</h3>
-            <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Login Required</h3>
+            <p className="text-base text-gray-500 max-w-xs mx-auto mb-6">
               Please log in to view your scheduled meetings and history.
             </p>
             <Button variant="outline" onClick={login}>

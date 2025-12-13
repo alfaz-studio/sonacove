@@ -364,12 +364,12 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Meetings</CardTitle>
+              <CardTitle className="text-lg font-medium">Total Meetings</CardTitle>
               <Video className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{analytics.totalMeetings}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 {dateRange?.from && dateRange?.to
                   ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
                   : 'All time'}
@@ -378,12 +378,12 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
           </Card>
           <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Minutes</CardTitle>
+              <CardTitle className="text-lg font-medium">Total Minutes</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{analytics.totalMinutes.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 {dateRange?.from && dateRange?.to
                   ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
                   : 'All time'}
@@ -392,24 +392,24 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
           </Card>
           <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Participants</CardTitle>
+              <CardTitle className="text-lg font-medium">Avg. Participants</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{analytics.avgParticipants}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Per meeting average
               </p>
             </CardContent>
           </Card>
           <Card className="bg-white shadow-sm border-accent-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
+              <CardTitle className="text-lg font-medium">Storage Used</CardTitle>
               <HardDrive className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{analytics.totalStorageGB.toFixed(2)} GB</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 From recordings
               </p>
             </CardContent>
@@ -499,7 +499,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
 
           {/* Participant size filter */}
           <div className="flex items-center gap-2">
-            <Label htmlFor="participant-size" className="text-sm text-muted-foreground whitespace-nowrap">
+            <Label htmlFor="participant-size" className="text-base text-muted-foreground whitespace-nowrap">
               Participants:
             </Label>
             <Select
@@ -530,7 +530,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
             />
             <Label
               htmlFor="ongoing"
-              className="text-sm font-normal cursor-pointer"
+              className="text-base font-normal cursor-pointer"
             >
               Ongoing
             </Label>
@@ -546,7 +546,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
             />
             <Label
               htmlFor="is-host"
-              className="text-sm font-normal cursor-pointer"
+              className="text-base font-normal cursor-pointer"
             >
               Hosted by me
             </Label>
@@ -563,7 +563,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
                 variant="ghost"
                 size="sm"
                 onClick={clearAllFilters}
-                className="h-7 text-xs hover:text-primary-600 hover:bg-primary-50"
+                className="h-7 text-sm hover:text-primary-600 hover:bg-primary-50"
               >
                 Clear all
               </Button>

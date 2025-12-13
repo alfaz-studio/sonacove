@@ -142,7 +142,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                     <div className="flex-shrink-0">{file.icon}</div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-base text-muted-foreground">
                         {file.type}
                         {file.size > 0 && ` • ${formatBytes(file.size)}`}
                       </p>
@@ -164,7 +164,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
             {/* Participants */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   Participants ({meeting.attendance.length})
                 </CardTitle>
@@ -175,15 +175,15 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                     {meeting.attendance.map((attendee, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
+                          <AvatarFallback className="text-sm">
                             {attendee.participantName.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
+                          <p className="text-base font-medium truncate">
                             {attendee.participantName}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-sm text-muted-foreground truncate">
                             {attendee.participantEmail}
                           </p>
                         </div>
@@ -191,7 +191,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {attendee.role}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             {attendee.duration} min
                           </span>
                         </div>
@@ -205,7 +205,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
             {/* Chat Log */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Chat Log ({meeting.chatLog.length} messages)
                 </CardTitle>
@@ -221,7 +221,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                       {meeting.chatLog.map((message) => (
                         <div key={message.id} className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium">{message.sender}</span>
+                            <span className="text-sm font-medium">{message.sender}</span>
                             <span className="text-[10px] text-muted-foreground">
                               {format(new Date(message.timestamp), "h:mm a")}
                             </span>
@@ -241,7 +241,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
             {meeting.polls.length > 0 && (
               <Card className="md:col-span-2">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <CardTitle className="text-lg font-medium flex items-center gap-2">
                     <ClipboardList className="h-4 w-4" />
                     Polls ({meeting.polls.length})
                   </CardTitle>
@@ -250,7 +250,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                   <div className="space-y-4">
                     {meeting.polls.map((poll) => (
                       <div key={poll.id} className="space-y-2">
-                        <p className="text-sm font-medium">{poll.question}</p>
+                        <p className="text-base font-medium">{poll.question}</p>
                         <div className="space-y-1">
                           {poll.options.map((option, i) => {
                             const percentage = Math.round((option.votes / poll.totalVotes) * 100)
@@ -260,7 +260,7 @@ export function MeetingDetails({ meeting }: MeetingDetailsProps) {
                                   className="absolute inset-0 bg-primary/10 rounded"
                                   style={{ width: `${percentage}%` }}
                                 />
-                                <div className="relative flex justify-between px-2 py-1 text-xs">
+                                <div className="relative flex justify-between px-2 py-1 text-sm">
                                   <span>{option.text}</span>
                                   <span className="font-medium">{percentage}% ({option.votes} votes)</span>
                                 </div>

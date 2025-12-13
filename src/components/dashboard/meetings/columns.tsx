@@ -95,7 +95,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
       return (
         <div className="flex flex-col">
           <span className="font-medium">{format(new Date(timestamp), "MMM d, yyyy")}</span>
-          <span className="text-xs text-muted-foreground">{format(new Date(timestamp), "h:mm a")}</span>
+          <span className="text-base text-muted-foreground">{format(new Date(timestamp), "h:mm a")}</span>
         </div>
       )
     },
@@ -163,12 +163,12 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex flex-col gap-1 cursor-help">
-                <div className="text-sm">
+                <div className="text-base">
                   {visibleNames.join(", ")}
                   {remainingCount > 0 && ` and ${remainingCount} more`}
                 </div>
                 {hosts.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     {hosts.slice(0, maxVisible).join(", ")}
                     {remainingCount > 0 && ` and ${remainingCount} more`}
                   </div>
@@ -180,7 +180,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
                 <p className="font-medium mb-1">All Hosts ({hosts.length}):</p>
                 <ul className="list-disc list-inside">
                   {displayNames.map((name, i) => (
-                    <li key={i} className="text-xs">
+                    <li key={i} className="text-sm">
                       {name}
                       {hosts[i] && <span className="text-muted-foreground"> ({hosts[i]})</span>}
                     </li>
@@ -282,7 +282,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
                   <span className="font-medium">{count}</span>
                 </div>
                 {participantNames.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     {visibleNames.join(", ")}
                     {remainingCount > 0 && ` and ${remainingCount} more`}
                   </div>
@@ -294,7 +294,7 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
                 <p className="font-medium mb-1">All Participants ({count}):</p>
                 <ul className="list-disc list-inside">
                   {participantNames.map((name, i) => (
-                    <li key={i} className="text-xs">{name}</li>
+                    <li key={i} className="text-sm">{name}</li>
                   ))}
                 </ul>
               </div>

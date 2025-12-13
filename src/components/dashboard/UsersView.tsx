@@ -258,16 +258,16 @@ const UsersView: React.FC<UsersViewProps> = () => {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Loading organization...</div>
+        <div className="text-base text-muted-foreground">Loading organization...</div>
       )}
       {loadError && (
-        <div className="text-sm text-red-600">{loadError}</div>
+        <div className="text-base text-red-600">{loadError}</div>
       )}
 
       {!orgMeta && !isLoading && (
         <div className="space-y-4 rounded-lg border p-6">
           <h2 className="text-xl font-semibold">No organization yet</h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-base">
             Create an organization to start adding members.
           </p>
           <div className="flex flex-col gap-4 max-w-md">
@@ -288,7 +288,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
                 value={orgDomain}
                 onChange={(e) => setOrgDomain(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 The domain name must be unique and will be used to identify your organization.
               </p>
             </div>
@@ -349,7 +349,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold">{orgMeta.name} Members</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Manage users in your organization. Invited users will appear as "Pending" until they accept.
           </p>
         </div>
@@ -445,7 +445,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
                 className={emailError ? 'border-red-500' : ''}
               />
               {emailError && (
-                <p className="text-sm text-red-500">{emailError}</p>
+                <p className="text-base text-red-500">{emailError}</p>
               )}
             </div>
             <div className="grid gap-2">
