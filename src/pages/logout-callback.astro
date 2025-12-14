@@ -17,7 +17,7 @@
           console.error('Logout callback warning:', error);
         }
 
-        const returnUrl = sessionStorage.getItem('logout_return_url') || '/meet';
+        const returnUrl = sessionStorage.getItem('logout_return_url') || '/dashboard';
         sessionStorage.removeItem('logout_return_url');
 
         window.location.href = returnUrl;

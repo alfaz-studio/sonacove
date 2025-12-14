@@ -42,7 +42,7 @@ const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onO
             >
               Subscribe Now for Full Access
             </Button>
-            <a href='/meet'>
+            <a href='/dashboard'>
               <Button variant='secondary' className='w-full'>
                 Continue with Trial
               </Button>
@@ -63,7 +63,7 @@ const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onO
               <strong>Status:</strong> Active
             </p>
           </div>
-          <a href='/meet'>
+          <a href='/dashboard'>
             <Button variant='primary' className='w-full'>
               Go to Sonacove Meets
             </Button>

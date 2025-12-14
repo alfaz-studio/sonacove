@@ -59,7 +59,7 @@ const OnboardingFlow: React.FC = () => {
           token: clientToken,
           eventCallback: (data) => {
             if (data.name === 'checkout.completed') {
-              window.location.href = '/meet?subscription=success';
+              window.location.href = '/dashboard?subscription=success';
             } else if (data.name === 'checkout.error') {
               handleError(
                 'There was a problem with the payment process.',
