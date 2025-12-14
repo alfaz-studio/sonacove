@@ -1,0 +1,10 @@
+---
+import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import '../../styles/globals.css';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Sonacove Dashboard" description="Manage your meetings, users, and organization settings.">
+  <DashboardLayout client:load />
+</BaseLayout>
+

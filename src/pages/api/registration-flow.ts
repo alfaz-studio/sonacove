@@ -42,8 +42,8 @@ const WorkerHandler: APIRoute = async ({ request }) => {
     try {
       requestBody = (await request.json()) as RegistrationFlowRequest;
     } catch (jsonError) {
-      logger.error("Invalid JSON in request body");
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      logger.error({ error: jsonError }, "Invalid JSON in request body");
+      return new Response(JSON.stringify({ error: "Invalid JSON", details: jsonError instanceof Error ? jsonError.message : String(jsonError) }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });

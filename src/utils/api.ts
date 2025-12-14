@@ -130,3 +130,35 @@ export const checkRoomAvailability = async (
     roomName: string;
   }>;
 };
+
+/**
+ * Fetches meetings for the authenticated user within a date range.
+ * @param {string} token The user's JWT access token.
+ * @param {Date} from The start date of the range.
+ * @param {Date} to The end date of the range.
+ * @returns Array of meeting metadata.
+ */
+export const fetchMeetings = async (
+  token: string,
+  from?: Date,
+  to?: Date,
+): Promise<any[]> => {
+  const params = new URLSearchParams();
+  if (from) {
+    params.append('from', from.toISOString());
+  }
+  if (to) {
+    params.append('to', to.toISOString());
+  }
+
+  const queryString = params.toString();
+  const url = `${API_BASE_URL}/meeting-history${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return handleApiResponse(response) as Promise<any[]>;
+};

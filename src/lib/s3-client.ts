@@ -219,7 +219,7 @@ export async function generatePresignedUrl(
       // Retrieve original filename from metadata
       fileName = headResponse.Metadata?.['original-filename'] || null;
     } catch (err) {
-      logger.warn({ key }, "File not found in S3");
+      logger.warn({ key, error: err }, "File not found in S3");
       return { url: null, fileName: null };
     }
 
@@ -320,8 +320,15 @@ export async function fileExists(sessionId: string, fileId: string): Promise<boo
       await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
       logger.debug({ key, exists: true }, "File existence check");
       return true;
-    } catch (err) {
-      logger.debug({ key, exists: false }, "File existence check");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        logger.debug(
+          { key, exists: false, errorName: err.name, errorMessage: err.message, stack: err.stack },
+          "File existence check"
+        );
+      } else {
+        logger.debug({ key, exists: false }, "File existence check");
+      }
       return false;
     }
 

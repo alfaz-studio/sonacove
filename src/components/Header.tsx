@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({
     // Landing page
     return (
       <div className='hidden md:flex gap-4 items-center'>
-        <a href='/meet'>
+        <a href='/dashboard'>
           <Button
             variant='primary'
             className='hidden md:block'
@@ -127,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({
                 {item.name}
               </a>
             ))}
-            <a href='/meet'>
+            <a href='/dashboard'>
               <Button variant='primary'>
                 Visit Platform
               </Button>

@@ -51,3 +51,12 @@ export interface KeycloakUserUpdate {
   enabled?: boolean;
   attributes?: Partial<KeycloakUserAttributes>;
 }
+
+export interface KeycloakOrganization {
+  id: string;
+  name: string;
+  alias?: string;
+  enabled?: boolean;
+  description?: string;
+  domains?: Array<{ name: string; verified?: boolean }>;
+}

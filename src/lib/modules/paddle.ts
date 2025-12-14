@@ -537,7 +537,7 @@ async function deleteCustomer(customerId: string): Promise<boolean> {
       return false;
     }
 
-    const archivedCustomer = await response.json();
+    await response.json();
     logger.info(`Successfully archived Paddle customer ${customerId}`);
     return true;
   } catch (error) {

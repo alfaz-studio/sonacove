@@ -6,6 +6,7 @@ import {
   timestamp,
   varchar,
   jsonb,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -27,6 +28,49 @@ export const users = sonacoveSchema.table("users", {
   totalHostMinutes: integer("total_host_minutes").notNull().default(0),
   hostSessionStartTime: timestamp("host_session_start_time", { withTimezone: true }),
   });
+
+// Organizations table
+export const organizations = sonacoveSchema.table("organizations", {
+  id: serial("id").primaryKey(),
+  kcOrgId: varchar("kc_org_id", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  alias: varchar("alias", { length: 255 }).notNull().unique(),
+  ownerUserId: integer("owner_user_id")
+    .notNull()
+    .references(() => users.id),
+  domains: jsonb("domains"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Organization members table
+export const organizationMembers = sonacoveSchema.table("organization_members", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 20 }).notNull().default("teacher"),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
+  kcUserId: varchar("kc_user_id", { length: 255 }),
+  invitedEmail: varchar("invited_email", { length: 255 }),
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
+  joinedAt: timestamp("joined_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => {
+  return {
+    userUnique: unique("organization_members_user_id_unique").on(table.userId),
+    membershipUnique: unique("organization_members_org_user_unique")
+      .on(table.orgId, table.userId),
+  };
+});
 
 
 // Booked rooms table
@@ -51,6 +95,8 @@ export const bookedRooms = sonacoveSchema.table("booked_rooms", {
 // Define relations
 export const usersRelations = relations(users, ({ many }) => ({
   bookedRooms: many(bookedRooms),
+  organizations: many(organizations, { relationName: "orgOwner" }),
+  memberships: many(organizationMembers, { relationName: "userMembership" }),
 }));
 
 export const bookedRoomsRelations = relations(bookedRooms, ({ one }) => ({
@@ -59,6 +105,30 @@ export const bookedRoomsRelations = relations(bookedRooms, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const organizationsRelations = relations(organizations, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [organizations.ownerUserId],
+    references: [users.id],
+    relationName: "orgOwner",
+  }),
+  members: many(organizationMembers),
+}));
+
+export const organizationMembersRelations = relations(
+  organizationMembers,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [organizationMembers.orgId],
+      references: [organizations.id],
+    }),
+    user: one(users, {
+      fields: [organizationMembers.userId],
+      references: [users.id],
+      relationName: "userMembership",
+    }),
+  })
+);
 
 // Meetings table
 export const meetings = sonacoveSchema.table("meetings", {
@@ -112,10 +182,14 @@ export const meetingEventsRelations = relations(meetingEvents, ({ one }) => ({
 // Export schema object for drizzle client
 export const schema = {
   users,
+  organizations,
+  organizationMembers,
   bookedRooms,
   meetings,
   meetingEvents,
   usersRelations,
+  organizationsRelations,
+  organizationMembersRelations,
   bookedRoomsRelations,
   meetingsRelations,
   meetingEventsRelations,

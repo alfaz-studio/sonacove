@@ -15,10 +15,10 @@
         try {
           const user = await getUserManager().signinRedirectCallback();
           
-          window.location.href = user.state as string || '/meet';
+          window.location.href = user.state as string || '/dashboard';
         } catch (error) {
           console.error('Login callback error:', error);
-          window.location.href = '/meet?error=login_failed';
+          window.location.href = '/dashboard?error=login_failed';
         }
       }
 

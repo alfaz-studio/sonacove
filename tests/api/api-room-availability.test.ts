@@ -164,6 +164,39 @@ describe("API: /api/room-availability", () => {
     // First, create a booking for the test room using the manage-booking API
     const manageBookingEndpoint = apiEndpoint.replace('/room-availability', '/manage-booking');
     
+    // Ensure we have a free slot by deleting all existing bookings for this user
+    try {
+      const dbUserEndpoint = apiEndpoint.replace('/room-availability', '/db-user');
+      const userResponse = await fetch(dbUserEndpoint, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json() as { bookedRooms: Array<{ roomName: string }> };
+        // Delete all existing bookings to free up slots
+        for (const booking of userData.bookedRooms || []) {
+          try {
+            await fetch(manageBookingEndpoint, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                roomName: booking.roomName
+              }),
+            });
+          } catch (e) {
+            // Ignore individual delete errors
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore errors during cleanup
+    }
+    
     const bookingResponse = await fetch(manageBookingEndpoint, {
       method: "POST",
       headers: {

@@ -13,6 +13,8 @@ const logger = getLogger();
 
 const tokenEndpoint = "/realms/jitsi/protocol/openid-connect/token";
 const userEndpoint = "/admin/realms/jitsi/users/";
+const orgsEndpoint = "/admin/realms/jitsi/organizations";
+const userOrgsEndpoint = "/admin/realms/jitsi/organizations/members";
 
 const tokenKey = "keycloak_token";
 const tokenExpiryKey = "keycloak_token_expiry";
@@ -273,6 +275,290 @@ export class KeycloakClient {
     } catch (e) {
       logger.error(e, `Error deleting Keycloak user ${userId}:`);
       return false;
+    }
+  }
+
+  /**
+   * Organization helpers (Keycloak Organizations API, KC 26.4+)
+   */
+  async createOrganization(this: KeycloakClient, params: {
+    name: string;
+    alias?: string;
+    domains?: string[];
+    description?: string;
+    enabled?: boolean;
+  }): Promise<{ id: string; alias: string } | null> {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      // Keycloak requires at least one domain. We use "sonacove.com" as default
+      // since domains feature is not yet implemented for users.
+      const domains = params.domains && params.domains.length > 0
+        ? params.domains
+        : ["sonacove.com"];
+
+      const payload = {
+        name: params.name,
+        alias: params.alias ?? params.name,
+        enabled: params.enabled ?? true,
+        description: params.description,
+        domains: domains.map((d) => ({ name: d })),
+      };
+
+      const url = "https://" + PUBLIC_KC_HOSTNAME + orgsEndpoint;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.status !== 201 && response.status !== 204) {
+        const errorText = await response.text();
+        logger.error(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+            payload: payload,
+          },
+          "Failed to create Keycloak organization:",
+        );
+        throw new Error(`Failed to create org: ${response.status} ${errorText}`);
+      }
+
+      const location = response.headers.get("Location") ?? "";
+      const id = location ? location.split("/").filter(Boolean).pop() : undefined;
+
+      return {
+        id: id ?? payload.alias,
+        alias: payload.alias,
+      };
+    } catch (e) {
+      logger.error(e, "Error creating Keycloak organization:");
+      return null;
+    }
+  }
+
+  async listUserOrganizations(this: KeycloakClient, userId: string) {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const url =
+        "https://" +
+        PUBLIC_KC_HOSTNAME +
+        `${userOrgsEndpoint}/${userId}/organizations?briefRepresentation=true`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to list user orgs: ${error}`);
+      }
+      return (await response.json()) as Array<{ id: string; name: string; alias: string }>;
+    } catch (e) {
+      logger.error(e, "Error listing user organizations:");
+      return [];
+    }
+  }
+
+  async getOrganizationMembers(this: KeycloakClient, orgId: string) {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const url = "https://" + PUBLIC_KC_HOSTNAME + `${orgsEndpoint}/${orgId}/members`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to get org members: ${error}`);
+      }
+      return (await response.json()) as KeycloakUser[];
+    } catch (e) {
+      logger.error(e, "Error getting organization members:");
+      return [];
+    }
+  }
+
+  async addMemberToOrganization(this: KeycloakClient, orgId: string, userId: string) {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const url = "https://" + PUBLIC_KC_HOSTNAME + `${orgsEndpoint}/${orgId}/members`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userId),
+      });
+
+      if (!response.ok && response.status !== 204 && response.status !== 201) {
+        const error = await response.text();
+        throw new Error(`Failed to add member: ${response.status} ${error}`);
+      }
+      return true;
+    } catch (e) {
+      logger.error(e, "Error adding member to organization:");
+      return false;
+    }
+  }
+
+  async removeMemberFromOrganization(this: KeycloakClient, orgId: string, userId: string) {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const url =
+        "https://" +
+        PUBLIC_KC_HOSTNAME +
+        `${orgsEndpoint}/${orgId}/members/${userId}`;
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const error = await response.text();
+        throw new Error(`Failed to remove member: ${response.status} ${error}`);
+      }
+      return true;
+    } catch (e) {
+      logger.error(e, "Error removing member from organization:");
+      return false;
+    }
+  }
+
+  /**
+   * Invite a user to an organization by email address.
+   * If the user exists, sends an invitation link; otherwise sends a registration link.
+   */
+  async inviteUserToOrganization(
+    this: KeycloakClient,
+    orgId: string,
+    params: {
+      email: string;
+      firstName?: string;
+      lastName?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const formData = new URLSearchParams();
+      formData.append("email", params.email);
+      if (params.firstName) formData.append("firstName", params.firstName);
+      if (params.lastName) formData.append("lastName", params.lastName);
+
+      const url =
+        "https://" +
+        PUBLIC_KC_HOSTNAME +
+        `${orgsEndpoint}/${orgId}/members/invite-user`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const error = await response.text();
+        throw new Error(`Failed to invite user: ${response.status} ${error}`);
+      }
+      return true;
+    } catch (e) {
+      logger.error(e, "Error inviting user to organization:");
+      return false;
+    }
+  }
+
+  /**
+   * Invite an existing Keycloak user to an organization by user ID.
+   */
+  async inviteExistingUserToOrganization(
+    this: KeycloakClient,
+    orgId: string,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const formData = new URLSearchParams();
+      formData.append("id", userId);
+
+      const url =
+        "https://" +
+        PUBLIC_KC_HOSTNAME +
+        `${orgsEndpoint}/${orgId}/members/invite-existing-user`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const error = await response.text();
+        throw new Error(`Failed to invite existing user: ${response.status} ${error}`);
+      }
+      return true;
+    } catch (e) {
+      logger.error(e, "Error inviting existing user to organization:");
+      return false;
+    }
+  }
+
+  /**
+   * Get organizations for a specific user (by member ID).
+   * Useful for checking if a user is already in an organization.
+   */
+  async getUserOrganizations(
+    this: KeycloakClient,
+    memberId: string
+  ): Promise<Array<{ id: string; name: string; alias: string }>> {
+    try {
+      if (!this.token) await this.fetchToken();
+      if (!this.token) throw new Error("Failed to get Keycloak token");
+
+      const url =
+        "https://" +
+        PUBLIC_KC_HOSTNAME +
+        `${userOrgsEndpoint}/${memberId}/organizations?briefRepresentation=true`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to get user organizations: ${error}`);
+      }
+      return (await response.json()) as Array<{ id: string; name: string; alias: string }>;
+    } catch (e) {
+      logger.error(e, "Error getting user organizations:");
+      return [];
     }
   }
 }

@@ -69,10 +69,10 @@ async function createContact(
       if (errorData && errorData.message) {
         errorMessage = errorData.message;
       }
-    } catch (e) {
-      // If JSON parsing fails, use the error text as is
+    } catch (parseError) {
+      // If JSON parsing fails, include the parse error and use the error text as is
       if (errorText) {
-        errorMessage += ` - ${errorText}`;
+        errorMessage += ` - ${errorText} (JSON parse error: ${parseError instanceof Error ? parseError.message : parseError})`;
       }
     }
     throw new Error(errorMessage);
@@ -117,10 +117,10 @@ async function updateContact(
       if (errorData && errorData.message) {
         errorMessage = errorData.message;
       }
-    } catch (e) {
-      // If JSON parsing fails, use the error text as is
+    } catch (parseError) {
+      // If JSON parsing fails, use the error text as is and include the parse error
       if (errorText) {
-        errorMessage += ` - ${errorText}`;
+        errorMessage += ` - ${errorText} (JSON parse error: ${parseError instanceof Error ? parseError.message : parseError})`;
       }
     }
     throw new Error(errorMessage);
@@ -160,10 +160,10 @@ async function getContact(
       if (errorData && errorData.message) {
         errorMessage = errorData.message;
       }
-    } catch (e) {
-      // If JSON parsing fails, use the error text as is
+    } catch (parseError) {
+      // If JSON parsing fails, use the error text as is and include the parse error
       if (errorText) {
-        errorMessage += ` - ${errorText}`;
+        errorMessage += ` - ${errorText} (JSON parse error: ${parseError instanceof Error ? parseError.message : parseError})`;
       }
     }
     throw new Error(errorMessage);
@@ -196,10 +196,10 @@ async function addContactToList(email: string, listId: number) {
       if (errorData && errorData.message) {
         errorMessage = errorData.message;
       }
-    } catch (e) {
-      // If JSON parsing fails, use the error text as is
+    } catch (parseError) {
+      // If JSON parsing fails, use the error text as is and include the parse error
       if (errorText) {
-        errorMessage += ` - ${errorText}`;
+        errorMessage += ` - ${errorText} (JSON parse error: ${parseError instanceof Error ? parseError.message : parseError})`;
       }
     }
     throw new Error(errorMessage);
@@ -220,12 +220,14 @@ async function findContactByEmailOrId(email: string, customerId?: string): Promi
     const contact = await getContact(email);
     return contact;
   } catch (emailError) {
+    logger.warn(emailError, `Contact not found using email: ${email}`);
     // If not found by email and we have a customer ID, try by customer ID
     if (customerId) {
       try {
         const contact = await getContact(customerId, true); // useExtId = true
         return contact;
       } catch (cidError) {
+        logger.warn(cidError, `Contact not found using customerId: ${customerId}`);
         // Contact not found by either method
         return null;
       }
@@ -327,11 +329,13 @@ async function deleteContact(
         if (errorData && errorData.message) {
           errorMessage = errorData.message;
         }
-      } catch (e) {
+      } catch (jsonParseError) {
         // If JSON parsing fails, use the error text as is
         if (errorText) {
           errorMessage += ` - ${errorText}`;
         }
+        // Optionally log the JSON parsing error for debugging
+        logger.error(`JSON parsing error while deleting contact: ${jsonParseError}`);
       }
       logger.error(errorMessage);
       return false;

@@ -1,9 +1,12 @@
-import { capturePosthogEvent } from "../../lib/modules/posthog";
+// import { capturePosthogEvent } from "../../lib/modules/posthog";
 import { PaddleClient } from "../../lib/modules/paddle";
 import { BrevoClient } from "../../lib/modules/brevo";
 import { KeycloakClient } from "../../lib/modules/keycloak";
 import { verifyWebhookSignature } from "../../lib/modules/jwt";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
+import { createDb } from "../../lib/db/drizzle";
+import { users } from "../../lib/db/schema";
+import { eq } from "drizzle-orm";
 import type { APIRoute } from "astro";
 import { KC_WEBHOOK_SECRET } from "astro:env/server";
 
@@ -72,8 +75,8 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
     try {
       webhookEvent = JSON.parse(rawBody) as KeycloakWebhookEvent;
     } catch (jsonError) {
-      logger.error("Invalid JSON in request body");
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      logger.error({ error: jsonError }, "Invalid JSON in request body");
+      return new Response(JSON.stringify({ error: "Invalid JSON", details: (jsonError as Error)?.message }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
@@ -261,10 +264,92 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
       case "access.REGISTER": {
         logger.info('REGISTER event captured')
-        // await capturePosthogEvent({
-        //   distinctId: webhookEvent.authDetails.userId,
-        //   event: 'user_registered',
-        // });
+        
+        const email = webhookEvent.authDetails.username;
+        
+        // Fallback: Ensure user exists in database even if registration-flow failed
+        // This prevents desync between Keycloak and the database
+        // Process asynchronously to return response immediately
+        locals.runtime.ctx.waitUntil(
+          (async () => {
+            try {
+              const db = createDb();
+              
+              // Check if user already exists
+              const existingUser = await db
+                .select()
+                .from(users)
+                .where(eq(users.email, email))
+                .limit(1);
+              
+              if (existingUser.length === 0) {
+                // User doesn't exist in DB, create them as a fallback
+                logger.info(`User not found in database for email: ${email}. Creating user as fallback.`);
+                
+                // Optionally fetch user details from Keycloak for better data
+                let firstName: string | undefined;
+                let lastName: string | undefined;
+                
+                try {
+                  const keycloakClient = new KeycloakClient(locals.runtime);
+                  const keycloakUser = await keycloakClient.getUser(email);
+                  if (keycloakUser) {
+                    firstName = keycloakUser.firstName;
+                    lastName = keycloakUser.lastName;
+                    logger.info(`Retrieved user details from Keycloak: ${firstName} ${lastName}`);
+                  }
+                } catch (keycloakError) {
+                  logger.warn(`Could not fetch user details from Keycloak: ${keycloakError}. Proceeding with minimal user creation.`);
+                }
+                
+                // Create new user with minimal required fields
+                const [newUser] = await db
+                  .insert(users)
+                  .values({
+                    email: email,
+                    isActiveHost: false,
+                    maxBookings: 1, // Default to 1 booking
+                    totalHostMinutes: 0,
+                  })
+                  .returning();
+                
+                logger.info(`Created user in database as fallback with ID: ${newUser.id} for email: ${email}`);
+                
+                // Optionally update Paddle and Brevo if we have name information
+                if (firstName || lastName) {
+                  const fullName = firstName && lastName 
+                    ? `${firstName} ${lastName}` 
+                    : firstName || lastName || "";
+                  
+                  if (fullName) {
+                    await Promise.allSettled([
+                      PaddleClient.setCustomer({ email, name: fullName }),
+                      BrevoClient.setContact(
+                        email,
+                        {
+                          ...(firstName && { FIRSTNAME: firstName }),
+                          ...(lastName && { LASTNAME: lastName }),
+                        }
+                      ),
+                    ]);
+                  }
+                }
+              } else {
+                logger.info(`User already exists in database for email: ${email}. No action needed.`);
+              }
+            } catch (dbError) {
+              // Log error but don't fail the webhook - this is a fallback mechanism
+              logger.error(dbError, `Failed to create user in database as fallback for email: ${email}`);
+            }
+            
+            // await capturePosthogEvent({
+            //   distinctId: webhookEvent.authDetails.userId,
+            //   event: 'user_registered',
+            // });
+          })()
+        );
+        
+        // Return immediately - processing happens in background
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { "Content-Type": "application/json" }
