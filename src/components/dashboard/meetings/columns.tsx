@@ -253,19 +253,23 @@ export const columns: ColumnDef<MeetingMetaData>[] = [
     cell: ({ row }) => {
       const count = row.getValue("participantCount") as number
       const participants = row.original.participants
+      const participantNamesFromData = row.original.participantNames
       
-      // Extract names from email addresses or use identifier as-is (guests are already named "Guest 1", etc.)
-      const participantNames = participants.map(identifier => {
-        // Check if it's an email address
-        if (identifier.includes("@") && !identifier.startsWith("Guest")) {
-          const namePart = identifier.split("@")[0]
-          return namePart.split(".").map(part => 
-            part.charAt(0).toUpperCase() + part.slice(1)
-          ).join(" ")
-        }
-        // For guests or other identifiers, use as-is (guests are already "Guest 1", "Guest 2", etc.)
-        return identifier
-      })
+      // Prefer explicit participantNames array from data if available and aligned
+      const participantNames =
+        Array.isArray(participantNamesFromData) && participantNamesFromData.length === participants.length
+          ? participantNamesFromData
+          : participants.map(identifier => {
+              // Fallback: derive a display name from the identifier
+              if (identifier.includes("@") && !identifier.startsWith("Guest")) {
+                const namePart = identifier.split("@")[0]
+                return namePart.split(".").map(part => 
+                  part.charAt(0).toUpperCase() + part.slice(1)
+                ).join(" ")
+              }
+              // For guests or other identifiers, use as-is (guests are already "Guest 1", "Guest 2", etc.)
+              return identifier
+            })
       
       // Show first 3 names, then "and X more"
       const maxVisible = 3

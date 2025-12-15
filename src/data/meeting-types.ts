@@ -72,6 +72,7 @@ export interface MeetingMetaData {
   hostNames: string[]; // array of host names
   duration: number; // minutes
   participants: string[]; // array of participant emails/identifiers (may include non-email strings for guests)
+  participantNames: string[]; // array of participant display names, parallel to participants where possible
   participantCount: number;
   status: MeetingStatus;
   
@@ -353,6 +354,10 @@ function generateMeeting(index: number, daysAgo: number): MeetingMetaData {
     hostNames: [host.name],
     duration,
     participants: selectedParticipants,
+    participantNames: selectedParticipants.map(email => {
+      const user = USERS.find(u => u.email === email);
+      return user ? user.name : email.split("@")[0];
+    }),
     participantCount,
     status: daysAgo < 3 && Math.random() > 0.3 ? "in_progress" : "completed",
     recordings,
