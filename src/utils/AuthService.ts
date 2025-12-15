@@ -63,40 +63,56 @@ class AuthService {
   private userManager = getUserManager();
   private state: AuthState = { user: null, isLoggedIn: false };
   private listeners: Set<AuthStateListener> = new Set();
+  private initialized = false;
+  private initializingPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initialize();
+    this.initializingPromise = this.initialize();
   }
 
   /**
    * Initializes the service, loads the user, and sets up event listeners.
    */
-  private async initialize(): Promise<void> {
-    let user = await this.userManager.getUser();
-
-    // If the user is in storage but expired, try to renew the token silently
-    if (user && user.expired) {
-      try {
-        // signinSilent will use the refresh_token to get a new access_token
-        user = await this.userManager.signinSilent();
-      } catch (error) {
-        console.error(
-          'AuthService: Silent renew failed, user is logged out.',
-          error,
-        );
-        // If silent renew fails, the user is logged out.
-        user = null;
-      }
+  private initialize(): Promise<void> {
+    if (this.initializingPromise) {
+      return this.initializingPromise;
     }
 
-    this.updateState(user);
+    this.initializingPromise = (async () => {
+      if (this.initialized) {
+        return;
+      }
 
-    this.userManager.events.addUserLoaded((user) => this.updateState(user));
-    this.userManager.events.addUserUnloaded(() => this.updateState(null));
-    this.userManager.events.addSilentRenewError((error) => {
-      console.error('AuthService: Silent renew error', error);
-      this.updateState(null);
-    });
+      let user = await this.userManager.getUser();
+
+      // If the user is in storage but expired, try to renew the token silently
+      if (user && user.expired) {
+        try {
+          // signinSilent will use the refresh_token to get a new access_token
+          user = await this.userManager.signinSilent();
+        } catch (error) {
+          console.error(
+            'AuthService: Silent renew failed, user is logged out.',
+            error,
+          );
+          // If silent renew fails, the user is logged out.
+          user = null;
+        }
+      }
+
+      this.updateState(user);
+
+      this.userManager.events.addUserLoaded((user) => this.updateState(user));
+      this.userManager.events.addUserUnloaded(() => this.updateState(null));
+      this.userManager.events.addSilentRenewError((error) => {
+        console.error('AuthService: Silent renew error', error);
+        this.updateState(null);
+      });
+
+      this.initialized = true;
+    })();
+
+    return this.initializingPromise;
   }
 
   /**
@@ -181,6 +197,21 @@ class AuthService {
   public handleLogoutCallback(): Promise<any> {
     this.ensureBrowser();
     return this.userManager.signoutRedirectCallback();
+  }
+
+  /**
+   * Indicates whether the initial auth bootstrap has completed.
+   * Useful for avoiding UI flicker before stored sessions are restored.
+   */
+  public isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
+   * Resolves once initialization (including silent renew attempts) finishes.
+   */
+  public whenReady(): Promise<void> {
+    return this.initializingPromise ?? Promise.resolve();
   }
 
 

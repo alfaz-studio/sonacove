@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client';
 import { initializePaddle, type Paddle } from '@paddle/paddle-js';
 
 import { getAuthService } from '../../../utils/AuthService';
@@ -18,7 +20,7 @@ import OnboardingErrorView from './OnboardingErrorView';
 const OnboardingFlow: React.FC = () => {
   const authService = getAuthService()
 
-  const { isLoggedIn, user, login} = useAuth();
+  const { isLoggedIn, user, login, isAuthReady} = useAuth();
   const [currentView, setCurrentView] = useState<'initial' | 'success' | 'error'>('initial');
 
   const [discountCode, setDiscountCode] = useState('');
@@ -91,6 +93,8 @@ const OnboardingFlow: React.FC = () => {
 
   // --- LIFECYCLE ---
   useEffect(() => {
+    if (!isAuthReady) return;
+
     if (isLoggedIn) {
       setCurrentView('success');
       setupPaddleCheckout().catch((error) => {
@@ -99,7 +103,7 @@ const OnboardingFlow: React.FC = () => {
     } else {
       setCurrentView('initial');
     }
-  }, [isLoggedIn]);
+  }, [isAuthReady, isLoggedIn]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -108,6 +112,17 @@ const OnboardingFlow: React.FC = () => {
   }, []);
 
   const renderCurrentView = () => {
+    if (!isAuthReady) {
+      return (
+        <div className='animate-pulse space-y-4'>
+          <div className='h-6 bg-gray-200 rounded w-1/2 mx-auto'></div>
+          <div className='h-4 bg-gray-200 rounded w-3/4 mx-auto'></div>
+          <div className='h-10 bg-gray-200 rounded'></div>
+          <div className='h-10 bg-gray-200 rounded'></div>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'success':
         return (
@@ -130,7 +145,7 @@ const OnboardingFlow: React.FC = () => {
   };
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Header pageType='landing' />
 
       <div className='container mx-auto px-4 py-12'>
@@ -138,7 +153,7 @@ const OnboardingFlow: React.FC = () => {
           {renderCurrentView()}
         </div>
       </div>
-    </>
+    </QueryClientProvider>
   );
 };
 

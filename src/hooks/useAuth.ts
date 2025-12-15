@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuthService } from '../utils/AuthService';
 import { format } from 'date-fns';
 import type { DbUser } from '../pages/meet/types';
 import type { User as OidcUser } from 'oidc-client-ts';
 import { fetchDbUser } from '../utils/api';
 import { getOrganizationFromJWT } from '../lib/modules/jwt';
+
+const authService = getAuthService();
+
+const DB_USER_TTL_MS = 1000 * 60 * 5;
 
 /**
  * A simplified representation of a booked meeting for UI display.
@@ -20,8 +25,6 @@ export interface Meeting {
   status: string;
 }
 
-const authService = getAuthService();
-
 /**
  * A comprehensive custom hook to manage the entire user authentication lifecycle and session data.
  * It handles OIDC authentication state, fetches custom user data from the database,
@@ -33,6 +36,7 @@ const authService = getAuthService();
  * @property {OidcUser | null} user - The raw user object from the OIDC provider.
  * @property {Meeting[]} meetings - A formatted list of the user's booked meetings.
  * @property {() => Promise<void>} refetchMeetings - A function to manually re-fetch the user's data from the database.
+ * @property {boolean} isAuthReady - Indicates that initial auth bootstrap finished.
  * @property {() => void | undefined} login - A function to initiate the OIDC login flow.
  * @property {() => void | undefined} logout - A function to initiate the OIDC logout flow.
  * @property {() => string | null} getAccessToken - A function to retrieve the user's current JWT access token.
@@ -55,6 +59,25 @@ export function useAuth() {
     orgAlias: string | null;
     orgId?: string | null;
   }>({ orgAlias: null, orgId: null });
+  /** Indicates when the initial auth bootstrap has completed. */
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(
+    () => authService?.isInitialized() ?? false,
+  );
+  const queryClient = useQueryClient();
+
+  const dbUserQuery = useQuery<DbUser>({
+    queryKey: ['dbUser', oidcUser?.profile.sub],
+    queryFn: async () => {
+      const token = authService?.getAccessToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      return fetchDbUser(token);
+    },
+    enabled: isLoggedIn && !!oidcUser?.access_token,
+    staleTime: DB_USER_TTL_MS,
+    gcTime: DB_USER_TTL_MS * 2,
+  });
 
   // Effect to subscribe to the global AuthService and keep local state in sync.
   useEffect(() => {
@@ -66,50 +89,64 @@ export function useAuth() {
     return unsubscribe;
   }, []);
 
+  // Track completion of the initial auth bootstrap to avoid UI flicker.
+  useEffect(() => {
+    let isMounted = true;
+    authService
+      ?.whenReady()
+      .catch((error) => console.error('Auth bootstrap failed', error))
+      .finally(() => {
+        if (isMounted) {
+          setIsAuthReady(true);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Keep local dbUser state in sync with the query result.
+  useEffect(() => {
+    setDbUser(dbUserQuery.data ?? null);
+  }, [dbUserQuery.data]);
+
   /**
    * Manually triggers a re-fetch of the user's data from the database.
    * Useful after performing an action like booking a meeting.
    */
   const refetchMeetings = useCallback(async () => {
-    const token = authService?.getAccessToken();
-    if (!token) {
+    if (!isLoggedIn) {
       console.error('Refetch failed: No user is logged in.');
       return;
     }
-
     try {
-      const data = await fetchDbUser(token);
-      setDbUser(data);
+      await dbUserQuery.refetch({ cancelRefetch: false });
     } catch (error) {
       console.error('Failed to refetch user from DB:', error);
-      setDbUser(null);
     }
-  }, []);
+  }, [dbUserQuery, isLoggedIn]);
 
   useEffect(() => {
-    const getUserData = async (token: string) => {
-      try {
-        const data = await fetchDbUser(token);
-        setDbUser(data);
-      } catch (error) {
-        console.error('Failed to fetch user from DB:', error);
-        setDbUser(null);
-      }
-    };
+    let isMounted = true;
 
     if (isLoggedIn && oidcUser?.access_token) {
-      getUserData(oidcUser.access_token);
-
       const org = getOrganizationFromJWT(oidcUser.access_token);
       setOrgContext({
         orgAlias: org?.orgAlias ?? null,
         orgId: org?.orgId ?? null,
       });
     } else {
-      setDbUser(null);
-      setOrgContext({ orgAlias: null, orgId: null });
+      queryClient.removeQueries({ queryKey: ['dbUser'] });
+      if (isMounted) {
+        setDbUser(null);
+        setOrgContext({ orgAlias: null, orgId: null });
+      }
     }
-  }, [oidcUser?.profile.sub, oidcUser?.access_token, isLoggedIn]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [oidcUser?.profile.sub, oidcUser?.access_token, isLoggedIn, queryClient]);
 
   useEffect(() => {
     if (dbUser && dbUser.bookedRooms) {
@@ -140,6 +177,7 @@ export function useAuth() {
     org: orgContext,
     meetings,
     refetchMeetings,
+    isAuthReady,
     login: () => authService?.login(),
     logout: () => authService?.logout(),
     getAccessToken: () => authService?.getAccessToken() ?? null,

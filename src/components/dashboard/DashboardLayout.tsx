@@ -83,10 +83,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
   const [activeView, setActiveView] = useState<View>('overview');
   
   // Get real auth data
-  const { user: oidcUser, dbUser, logout, login } = useAuth();
+  const { user: oidcUser, dbUser, logout, login, isAuthReady } = useAuth();
   const { popup, hidePopup } = usePopup();
 
   useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
     if (dbUser && oidcUser) {
       const avatar = oidcUser.profile.picture || getGravatarUrl(dbUser.user.email);
 
@@ -103,7 +107,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
     } else {
       setActiveUser(null);
     }
-  }, [dbUser, oidcUser]);
+  }, [dbUser, oidcUser, isAuthReady]);
 
   // Navigation Items based on Role
   const getMainNavItems = (role: Role) => {
@@ -205,7 +209,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
 
         {/* User Profile Footer or Sign In Button */}
         <SidebarFooter className="border-t border-sidebar-border">
-          {activeUser ? (
+          {!isAuthReady ? (
+            <div className="p-4 text-sm text-muted-foreground">Checking session…</div>
+          ) : activeUser ? (
             <SidebarMenu>
               <SidebarMenuItem>
                 <DropdownMenu>
@@ -271,11 +277,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50/50 text-xl">
-          {activeView === 'overview' && <OverviewView />}
-          {activeView === 'meetings' && (activeUser ? <MeetingsView user={activeUser} /> : <LoginRequired />)}
-          {activeView === 'users' && (activeUser ? <UsersView user={activeUser} /> : <LoginRequired />)}
-          {activeView === 'developer' && <DeveloperView />}
-          {activeView === 'settings' && (activeUser ? <SettingsView user={activeUser} /> : <LoginRequired />)}
+          {!isAuthReady ? (
+            <div className="space-y-4 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          ) : (
+            <>
+              {activeView === 'overview' && <OverviewView />}
+              {activeView === 'meetings' && (activeUser ? <MeetingsView user={activeUser} /> : <LoginRequired />)}
+              {activeView === 'users' && (activeUser ? <UsersView user={activeUser} /> : <LoginRequired />)}
+              {activeView === 'developer' && <DeveloperView />}
+              {activeView === 'settings' && (activeUser ? <SettingsView user={activeUser} /> : <LoginRequired />)}
+            </>
+          )}
         </main>
       </SidebarInset>
     </SidebarProvider>
