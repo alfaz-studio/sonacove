@@ -17,7 +17,13 @@ const ClosePage = () => {
   };
 
   const handleGoDashboard = () => {
-    window.location.href = '/dashboard';
+    // @ts-ignore
+    if (typeof window.jitsiNodeAPI !== 'undefined') {
+        // @ts-ignore
+        window.jitsiNodeAPI.ipc.send('nav-to-home');
+    } else {
+        window.location.href = '/dashboard';
+    }
   };
 
   const handleRejoin = () => {
