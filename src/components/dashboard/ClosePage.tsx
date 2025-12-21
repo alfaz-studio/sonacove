@@ -8,13 +8,6 @@ import {
 import SonacoveLogo from '../../assets/sonacove-orange.svg';
 
 const ClosePage = () => {
-  const handleCloseApp = () => {
-    try {
-      window.close();
-    } catch (e) {
-      console.warn("Could not close window directly", e);
-    }
-  };
 
   const handleGoDashboard = () => {
     // @ts-ignore
@@ -65,32 +58,21 @@ const ClosePage = () => {
         {/* Card Actions */}
         <div className="p-6 bg-gray-50/30 flex flex-col gap-3">
           
-          {/* Primary Action: Go to Dashboard */}
           <button
             onClick={handleGoDashboard}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all duration-200"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-500/90 focus-visible:outline focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-primary transition-all duration-200"
           >
             <LayoutDashboard className="h-5 w-5" />
-            Back to Dashboard
+            Go to Dashboard
           </button>
 
-          <div className="grid grid-cols-2 gap-3 mt-1">
-            {/* Secondary: Rejoin */}
+          <div className="grid grid-cols-1 gap-3 mt-1">
             <button
               onClick={handleRejoin}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200 transition-all duration-200"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-200 transition-all duration-200"
             >
               <RotateCcw className="h-5 w-5" />
               Rejoin
-            </button>
-
-            {/* Secondary: Close App */}
-            <button
-              onClick={handleCloseApp}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700 hover:border-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-100 transition-all duration-200"
-            >
-              <X className="h-5 w-5" />
-              Close App
             </button>
           </div>
         </div>
