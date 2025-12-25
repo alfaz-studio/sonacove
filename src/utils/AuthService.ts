@@ -188,6 +188,18 @@ class AuthService {
    */
   public logout(): Promise<void> {
     this.ensureBrowser();
+
+    // @ts-ignore
+    if (window.jitsiNodeAPI) {
+        console.log("🖥️ Electron detected: Delegating logout to system browser...");
+        
+        // 1. Open the proxy logout page in browser
+        const targetUrl = `${window.location.origin}/logout-desktop-proxy`;
+        
+        // @ts-ignore
+        window.jitsiNodeAPI.ipc.send('open-external', targetUrl);
+        return Promise.resolve();
+    }
     sessionStorage.setItem('logout_return_url', window.location.href);
     return this.userManager.signoutRedirect();
   }

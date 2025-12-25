@@ -17,6 +17,18 @@
           console.error('Logout callback warning:', error);
         }
 
+        const isDesktopLogout = sessionStorage.getItem('is_desktop_logout') === 'true';
+        sessionStorage.removeItem('is_desktop_logout');
+
+        if (isDesktopLogout) {
+            // Redirect back to Electron to clear its state
+            window.location.href = 'sonacove://logout-callback';
+            
+            // Show feedback in browser
+            document.body.innerHTML = "<h1>Logged out successfully.<br>You can close this tab.</h1>";
+            return;
+        }
+
         const returnUrl = sessionStorage.getItem('logout_return_url') || '/dashboard';
         sessionStorage.removeItem('logout_return_url');
 

@@ -107,6 +107,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
                   console.error("❌ Failed to store user token:", e);
               }
           });
+
+          // @ts-ignore
+          window.jitsiNodeAPI.ipc.on('auth-logout-complete', async () => {
+              console.log("🔓 Logout signal received!");
+              
+              // 1. Clear LocalStorage
+              localStorage.clear();
+              sessionStorage.clear();
+              
+              // 2. Remove user from OIDC manager
+              await getUserManager().removeUser();
+              
+              // 3. Reload to show Login screen
+              window.location.reload();
+          });
       }
   }, []);
 
