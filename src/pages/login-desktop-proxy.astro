@@ -1,0 +1,17 @@
+<script>
+  import { getUserManager } from '../utils/AuthService';
+
+  // Async wrapper to ensure storage writes complete
+  (async function() {
+    try {
+      console.log("🚀 Starting Desktop Login Flow...");
+      await getUserManager().signinRedirect({
+          state: "desktop_login" 
+      });
+    } catch (e) {
+      console.error("Failed to start login redirect", e);
+      document.body.innerText = "Error starting login. Please check console.";
+    }
+  })();
+</script>
+<p>Redirecting to login provider...</p>

@@ -138,6 +138,20 @@ class AuthService {
    */
   public login(): Promise<void> {
     this.ensureBrowser();
+
+    // If in Electron, do NOT start OIDC here (state will be trapped in Electron).
+    // Instead, open the browser to the dashboard login page so it generates the state there.
+    // @ts-ignore
+    if (window.jitsiNodeAPI) {
+        // We append ?source=desktop so the browser knows to redirect back to the app later
+        const targetUrl = `${window.location.origin}/login-desktop-proxy`; 
+        
+        // Use the bridge to open external URL
+        // @ts-ignore
+        window.jitsiNodeAPI.ipc.send('open-external', targetUrl);
+        return Promise.resolve();
+    }
+
     return this.userManager.signinRedirect({
       state: window.location.pathname + window.location.search,
     });

@@ -15,7 +15,18 @@
         try {
           const user = await getUserManager().signinRedirectCallback();
           
-          window.location.href = user.state as string || '/dashboard';
+          if (user.state === 'desktop_login') {
+             
+             const payload = encodeURIComponent(JSON.stringify(user));
+             
+             window.location.href = `sonacove://auth-callback?payload=${payload}`;
+             
+             document.body.innerHTML = "<h1>Login successful! You can close this tab.</h1>";
+             
+          } else {
+             window.location.href = (user.state as string) || '/dashboard';
+          }
+
         } catch (error) {
           console.error('Login callback error:', error);
           window.location.href = '/dashboard?error=login_failed';

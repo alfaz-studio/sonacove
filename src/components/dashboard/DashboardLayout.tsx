@@ -44,6 +44,7 @@ import { usePopup } from '../../hooks/usePopup';
 import { useAuth } from '@/hooks/useAuth';
 import { getGravatarUrl } from '../../utils/gravatar';
 import LoginRequired from './LoginRequired';
+import { PUBLIC_CF_ENV } from 'astro:env/client';
 
 interface DashboardLayoutProps {}
 
@@ -85,6 +86,30 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
   // Get real auth data
   const { user: oidcUser, dbUser, logout, login } = useAuth();
   const { popup, hidePopup } = usePopup();
+
+  useEffect(() => {
+      // @ts-ignore
+      if (window.jitsiNodeAPI) {
+          // @ts-ignore
+          window.jitsiNodeAPI.ipc.on('auth-token-received', (user: any) => {
+              console.log("🔐 Tokens received from Browser!");
+              
+              const authorityUrl = PUBLIC_CF_ENV === 'production'
+                ? 'https://auth.sonacove.com/auth/realms/jitsi'
+                : 'https://staj.sonacove.com/auth/realms/jitsi';
+              
+              const clientId = 'jitsi-web';
+              
+              const key = `user:${authorityUrl}:${clientId}`;
+              
+              console.log(`💾 Saving session to: ${key}`);
+              localStorage.setItem(key, JSON.stringify(user));
+              
+              // 2. Reload to pick up the new user state
+              window.location.reload();
+          });
+      }
+  }, []);
 
   useEffect(() => {
     if (dbUser && oidcUser) {
