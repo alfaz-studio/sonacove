@@ -44,7 +44,8 @@ import { usePopup } from '../../hooks/usePopup';
 import { useAuth } from '@/hooks/useAuth';
 import { getGravatarUrl } from '../../utils/gravatar';
 import LoginRequired from './LoginRequired';
-import { PUBLIC_CF_ENV } from 'astro:env/client';
+import { getUserManager } from '@/utils/AuthService';
+import { User as _User } from 'oidc-client-ts';
 
 interface DashboardLayoutProps {}
 
@@ -91,22 +92,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = () => {
       // @ts-ignore
       if (window.jitsiNodeAPI) {
           // @ts-ignore
-          window.jitsiNodeAPI.ipc.on('auth-token-received', (user: any) => {
-              console.log("🔐 Tokens received from Browser!");
-              
-              const authorityUrl = PUBLIC_CF_ENV === 'production'
-                ? 'https://auth.sonacove.com/auth/realms/jitsi'
-                : 'https://staj.sonacove.com/auth/realms/jitsi';
-              
-              const clientId = 'jitsi-web';
-              
-              const key = `user:${authorityUrl}:${clientId}`;
-              
-              console.log(`💾 Saving session to: ${key}`);
-              localStorage.setItem(key, JSON.stringify(user));
-              
-              // 2. Reload to pick up the new user state
-              window.location.reload();
+          window.jitsiNodeAPI.ipc.on('auth-token-received', async (userJson: any) => {
+              console.log("🔐 Tokens received from Browser!", userJson);
+
+              try {
+                  const user = _User.fromStorageString(JSON.stringify(userJson));
+
+                  await getUserManager().storeUser(user);
+
+                  console.log("✅ User stored successfully. Reloading...");
+
+                  window.location.reload();
+              } catch (e) {
+                  console.error("❌ Failed to store user token:", e);
+              }
           });
       }
   }, []);

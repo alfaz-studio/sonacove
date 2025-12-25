@@ -139,16 +139,19 @@ class AuthService {
   public login(): Promise<void> {
     this.ensureBrowser();
 
-    // If in Electron, do NOT start OIDC here (state will be trapped in Electron).
-    // Instead, open the browser to the dashboard login page so it generates the state there.
     // @ts-ignore
     if (window.jitsiNodeAPI) {
-        // We append ?source=desktop so the browser knows to redirect back to the app later
+        console.log("🖥️ Electron detected: Delegating login to system browser...");
+        
+        // 1. Construct the URL for the proxy page
+        // This page will start the OIDC flow inside Chrome
         const targetUrl = `${window.location.origin}/login-desktop-proxy`; 
         
-        // Use the bridge to open external URL
+        // 2. Tell Electron to open this URL externally
         // @ts-ignore
         window.jitsiNodeAPI.ipc.send('open-external', targetUrl);
+        
+        // 3. Stop execution here so Electron doesn't start its own flow
         return Promise.resolve();
     }
 
