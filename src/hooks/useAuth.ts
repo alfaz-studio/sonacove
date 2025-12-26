@@ -170,6 +170,18 @@ export function useAuth() {
     }
   }, [dbUser]);
 
+  const getAccessToken = useCallback(() => {
+    return authService?.getAccessToken() ?? null;
+  }, []);
+
+  const login = useCallback(() => {
+    authService?.login();
+  }, []);
+
+  const logout = useCallback(() => {
+    authService?.logout();
+  }, []);
+
   return {
     isLoggedIn,
     dbUser,
@@ -178,8 +190,8 @@ export function useAuth() {
     meetings,
     refetchMeetings,
     isAuthReady,
-    login: () => authService?.login(),
-    logout: () => authService?.logout(),
-    getAccessToken: () => authService?.getAccessToken() ?? null,
+    login,
+    logout,
+    getAccessToken,
   };
 }

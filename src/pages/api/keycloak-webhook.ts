@@ -4,9 +4,6 @@ import { BrevoClient } from "../../lib/modules/brevo";
 import { KeycloakClient } from "../../lib/modules/keycloak";
 import { verifyWebhookSignature } from "../../lib/modules/jwt";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
-import { createDb } from "../../lib/db/drizzle";
-import { users } from "../../lib/db/schema";
-import { eq } from "drizzle-orm";
 import type { APIRoute } from "astro";
 import { KC_WEBHOOK_SECRET } from "astro:env/server";
 
@@ -194,6 +191,10 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
             headers: { "Content-Type": "application/json" },
           });
         }
+
+        // Note: We no longer write to paddle_customers directly here.
+        // Paddle will send a webhook event (customer.updated or customer.created)
+        // which will update the paddle_customers table via the Paddle webhook handler.
 
         return new Response(
           JSON.stringify({

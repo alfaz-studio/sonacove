@@ -5,6 +5,7 @@ import {
   organizationMembers,
   organizations,
   users,
+  paddleSubscriptions,
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
@@ -68,6 +69,35 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
     const membership = callerMembership[0];
     if (membership.role !== "owner") {
       return jsonError("Only owners can invite members", 403);
+    }
+
+    // Enforce seat limits if an org subscription exists
+    const [orgSubscription] =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(eq(paddleSubscriptions.orgId, membership.orgId))
+        .limit(1)) ?? [];
+
+    if (orgSubscription) {
+      const currentMembers = await db
+        .select({
+          status: organizationMembers.status,
+        })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.orgId, membership.orgId));
+
+      const seatsUsed = currentMembers.filter(
+        (m) => m.status === "active" || m.status === "pending",
+      ).length;
+      const seatsTotal = orgSubscription.quantity ?? 1;
+
+      if (seatsUsed >= seatsTotal) {
+        return jsonError(
+          "Your organization has reached its seat limit. Please upgrade your plan to invite more members.",
+          403,
+        );
+      }
     }
 
     // Check if target user already belongs to any org (DB check)

@@ -1,30 +1,21 @@
-import { getEmailFromJWT } from "../../lib/modules/jwt";
-import { KeycloakClient } from "../../lib/modules/keycloak";
-import { PaddleClient } from "../../lib/modules/paddle";
-import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
 import type { APIRoute } from "astro";
-import { createDb } from "../../lib/db/drizzle";
-import { users, paddleCustomers } from "../../lib/db/schema";
+import { getEmailFromJWT } from "../../../lib/modules/jwt";
+import { KeycloakClient } from "../../../lib/modules/keycloak";
+import { PaddleClient } from "../../../lib/modules/paddle";
+import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
+import { createDb } from "../../../lib/db/drizzle";
+import { users, paddleCustomers } from "../../../lib/db/schema";
 import { eq } from "drizzle-orm";
-
 
 export const prerender = false;
 const logger = getLogger();
 
-
-/**
- * Generates a Paddle customer portal URL for the authenticated user
-*
-* This API requires a valid Keycloak access token passed as a Bearer token
-* and returns a URL that will automatically log the user into the Paddle customer portal
-*/
 export const GET: APIRoute = async (c) => {
-  return await logWrapper(c, WorkerHandler)
-}
+  return await logWrapper(c, WorkerHandler);
+};
 
 const WorkerHandler: APIRoute = async ({ request, locals }) => {
   try {
-    // Get JWT from Authorization header
     const authHeader = request.headers.get("Authorization");
     const jwt = authHeader?.replace("Bearer ", "");
 
@@ -35,7 +26,6 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Validate JWT using KeycloakClient
     const keycloakClient = new KeycloakClient(locals.runtime);
     const isValidToken = await keycloakClient.validateToken(jwt);
     if (!isValidToken) {
@@ -53,7 +43,6 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Find app user in DB
     const db = createDb();
     const [dbUser] =
       (await db.select().from(users).where(eq(users.email, email)).limit(1)) ??
@@ -66,7 +55,6 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Get Paddle customer ID from paddle_customers table (our source of truth)
     const [pc] =
       (await db
         .select()
@@ -83,12 +71,12 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
         {
           status: 404,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
-    // Create a customer portal session using PaddleClient
-    const portalUrl = await PaddleClient.createCustomerPortalSession(paddleCustomerId);
+    const portalUrl =
+      await PaddleClient.createCustomerPortalSession(paddleCustomerId);
 
     if (!portalUrl) {
       logger.error("Failed to create customer portal session");
@@ -97,20 +85,14 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
-    // Return the customer portal URL
-    return new Response(
-      JSON.stringify({
-        url: portalUrl,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ url: portalUrl }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
     logger.error(e, "Error creating customer portal session:");
     return new Response(JSON.stringify({ error: "Internal server error" }), {
@@ -119,3 +101,5 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
     });
   }
 };
+
+

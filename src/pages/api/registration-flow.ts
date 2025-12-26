@@ -130,8 +130,13 @@ const WorkerHandler: APIRoute = async ({ request }) => {
         .where(eq(users.email, requestBody.email))
         .limit(1);
 
+      let dbUserId: number;
+
       if (existingUser.length > 0) {
-        logger.info(`User already exists in database for email: ${requestBody.email}`);
+        logger.info(
+          `User already exists in database for email: ${requestBody.email}`,
+        );
+        dbUserId = existingUser[0].id;
       } else {
         // Create new user
         const [newUser] = await db
@@ -144,8 +149,15 @@ const WorkerHandler: APIRoute = async ({ request }) => {
           })
           .returning();
 
-        logger.info(`Created new user in database with ID: ${newUser.id} for email: ${requestBody.email}`);
+        logger.info(
+          `Created new user in database with ID: ${newUser.id} for email: ${requestBody.email}`,
+        );
+        dbUserId = newUser.id;
       }
+
+      // Note: We no longer write to paddle_customers directly here.
+      // Paddle will send a webhook event (customer.updated or customer.created)
+      // which will update the paddle_customers table via the Paddle webhook handler.
     } catch (e) {
       logger.error(e, "Failed to create/update user in database:");
       // Continue with the flow even if user creation fails

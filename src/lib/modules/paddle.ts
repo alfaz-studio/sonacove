@@ -54,6 +54,8 @@ export interface PaddleWebhookData {
     price_id: string;
     product_id: string;
   }>;
+  customer?: PaddleCustomer;
+  business?: PaddleBusiness;
 }
 
 export interface PaddleCustomer {
@@ -95,6 +97,23 @@ export interface PaddleCustomerInput {
   locale?: string;
   custom_data?: Record<string, any>;
   marketing_consent?: boolean;
+}
+
+export interface PaddleBusiness {
+  id: string;
+  name: string;
+  company_number?: string | null;
+  tax_identifier?: string | null;
+  status: string;
+  customer_id?: string | null;
+  address?: {
+    country_code: string;
+    postal_code?: string | null;
+    city?: string | null;
+    region?: string | null;
+    line1?: string | null;
+    line2?: string | null;
+  } | null;
 }
 
 const getPaddleBaseUrl = () => {
@@ -165,8 +184,41 @@ function extractWebhookData(event: PaddleWebhookEvent): PaddleWebhookData {
     occurred_at,
   };
 
+  if (!data) {
+    return extractedData;
+  }
+
+  // Extract customer data
+  if (event_type.startsWith("customer.")) {
+    extractedData.customer = {
+      id: data.id,
+      status: data.status || "active",
+      name: (data as any).name || null,
+      email: (data as any).email || "",
+      marketing_consent: (data as any).marketing_consent || false,
+      locale: (data as any).locale || "en",
+      created_at: (data as any).created_at || occurred_at,
+      updated_at: (data as any).updated_at || occurred_at,
+      custom_data: (data as any).custom_data || null,
+      import_meta: (data as any).import_meta || null,
+    };
+  }
+
+  // Extract business data
+  if (event_type.startsWith("business.")) {
+    extractedData.business = {
+      id: data.id,
+      name: (data as any).name || "",
+      company_number: (data as any).company_number || null,
+      tax_identifier: (data as any).tax_identifier || null,
+      status: data.status || "active",
+      customer_id: (data as any).customer_id || null,
+      address: (data as any).address || null,
+    };
+  }
+
   // Extract subscription or transaction data
-  if (data && data.status && data.customer_id) {
+  if (data.status && data.customer_id) {
     // For subscription events
     if (event_type.startsWith("subscription.")) {
       extractedData.subscription = {
@@ -546,6 +598,56 @@ async function deleteCustomer(customerId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Creates a Paddle business for a given customer.
+ * NOTE: Endpoint shape is based on Paddle API v2 businesses for customers.
+ */
+async function createBusinessForCustomer(
+  customerId: string,
+  payload: {
+    name: string;
+    tax_identifier?: string;
+    address?: {
+      country_code: string;
+      postal_code?: string;
+      city?: string;
+      region?: string;
+      line1?: string;
+      line2?: string;
+    };
+  }
+): Promise<PaddleBusiness | null> {
+  try {
+    const baseUrl = getPaddleBaseUrl();
+    const endpoint = `${baseUrl}/customers/${customerId}/businesses`;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${PADDLE_API_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error(
+        `Failed to create Paddle business for customer ${customerId}: ${response.status} ${errorText}`
+      );
+      return null;
+    }
+
+    const json = (await response.json()) as { data: PaddleBusiness };
+    return json.data;
+  } catch (error) {
+    logger.error(
+      `Error creating Paddle business for customer ${customerId}: ${error}`
+    );
+    return null;
+  }
+}
+
 export const PaddleClient = {
   fetchCustomer,
   validateWebhook,
@@ -555,4 +657,5 @@ export const PaddleClient = {
   setCustomer,
   createCustomerPortalSession,
   deleteCustomer, // Archives customer (soft delete)
+  createBusinessForCustomer,
 };

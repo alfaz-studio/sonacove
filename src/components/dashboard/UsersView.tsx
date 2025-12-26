@@ -91,6 +91,10 @@ const UsersView: React.FC<UsersViewProps> = () => {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [orgName, setOrgName] = useState('');
   const [orgDomain, setOrgDomain] = useState('');
+  const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
+  const [seatsTotal, setSeatsTotal] = useState<number | null>(null);
+  const [seatsAvailable, setSeatsAvailable] = useState<number | null>(null);
+  const [hasOrgSubscription, setHasOrgSubscription] = useState<boolean | null>(null);
 
   const fetchOrg = async () => {
     const token = getAccessToken?.();
@@ -124,6 +128,17 @@ const UsersView: React.FC<UsersViewProps> = () => {
           joinedAt: m.joinedAt?.split('T')[0] ?? '',
         }));
         setOrgMembers(members);
+
+        const subscription = (data.organization as any).subscription;
+        if (subscription) {
+          setSeatsUsed(subscription.seatsUsed ?? null);
+          setSeatsTotal(subscription.seatsTotal ?? null);
+          setSeatsAvailable(subscription.seatsAvailable ?? null);
+        } else {
+          setSeatsUsed(null);
+          setSeatsTotal(null);
+          setSeatsAvailable(null);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -135,6 +150,32 @@ const UsersView: React.FC<UsersViewProps> = () => {
 
   useEffect(() => {
     fetchOrg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch subscription summary once to know if the user has an org-tier subscription
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const token = getAccessToken?.();
+      if (!token) return;
+      try {
+        const res = await fetch('/api/subscriptions/summary', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          return;
+        }
+        const data = (await res.json()) as {
+          orgSubscription: { status: string } | null;
+        };
+        setHasOrgSubscription(
+          !!data.orgSubscription && data.orgSubscription.status === 'active',
+        );
+      } catch (e) {
+        console.error('Failed to load subscription summary for org creation', e);
+      }
+    };
+    fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -270,6 +311,12 @@ const UsersView: React.FC<UsersViewProps> = () => {
           <p className="text-muted-foreground text-base">
             Create an organization to start adding members.
           </p>
+          {hasOrgSubscription === false && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              Creating an organization requires an active Organization plan. Upgrade
+              from the Plan &amp; Billing tab first, then return here to create your org.
+            </p>
+          )}
           <div className="flex flex-col gap-4 max-w-md">
             <div className="grid gap-2">
               <Label htmlFor="orgName">Organization name *</Label>
@@ -296,6 +343,13 @@ const UsersView: React.FC<UsersViewProps> = () => {
               onClick={async () => {
                 const token = getAccessToken?.();
                 if (!token) return;
+                if (hasOrgSubscription === false) {
+                  showPopup(
+                    'Creating an organization requires the Organization plan. Please upgrade in the Plan & Billing tab first.',
+                    'info',
+                  );
+                  return;
+                }
                 if (!orgName.trim()) {
                   showPopup('Please enter an organization name', 'error');
                   return;
@@ -354,7 +408,11 @@ const UsersView: React.FC<UsersViewProps> = () => {
           </p>
         </div>
         {orgMeta.role === 'owner' && (
-          <Button className="gap-2 bg-primary-500 text-white hover:bg-primary-600" onClick={() => setIsAddUserOpen(true)}>
+          <Button
+            className="gap-2 bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
+            onClick={() => setIsAddUserOpen(true)}
+            disabled={seatsAvailable !== null && seatsAvailable <= 0}
+          >
             <Plus className="h-4 w-4" /> Invite User
           </Button>
         )}
@@ -363,6 +421,29 @@ const UsersView: React.FC<UsersViewProps> = () => {
 
       {orgMeta && (
       <>
+        {/* Seat usage & search */}
+        <div className="flex flex-col gap-4">
+          {seatsTotal !== null && (
+            <div className="space-y-3">
+              {seatsUsed !== null && seatsTotal !== null && seatsUsed > seatsTotal && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  Your organization is using more seats than your current plan
+                  includes. Remove members or increase seats from the Plan &amp;
+                  Billing tab.
+                </div>
+              )}
+              <div className="rounded-lg border bg-white px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Organization seats</p>
+                  <p className="text-sm text-muted-foreground">
+                    {seatsUsed ?? 0} of {seatsTotal} seats used
+                    {seatsAvailable !== null && ` (${seatsAvailable} available)`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="relative w-full sm:w-96">
@@ -410,6 +491,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
         </div>
 
         {/* Data Table */}

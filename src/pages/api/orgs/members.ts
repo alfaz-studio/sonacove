@@ -5,6 +5,7 @@ import {
   organizationMembers,
   organizations,
   users,
+  paddleSubscriptions,
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
@@ -91,6 +92,35 @@ async function addMember({ request, locals }: Parameters<APIRoute>[0]) {
       .limit(1);
     if (existing.length > 0) {
       return jsonError("User already belongs to an organization", 409);
+    }
+
+    // Enforce seat limits if an org subscription exists
+    const [orgSubscription] =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(eq(paddleSubscriptions.orgId, membership.orgId))
+        .limit(1)) ?? [];
+
+    if (orgSubscription) {
+      const currentMembers = await db
+        .select({
+          status: organizationMembers.status,
+        })
+        .from(organizationMembers)
+        .where(eq(organizationMembers.orgId, membership.orgId));
+
+      const seatsUsed = currentMembers.filter(
+        (m) => m.status === "active" || m.status === "pending",
+      ).length;
+      const seatsTotal = orgSubscription.quantity ?? 1;
+
+      if (seatsUsed >= seatsTotal) {
+        return jsonError(
+          "Your organization has reached its seat limit. Please upgrade your plan to add more members.",
+          403,
+        );
+      }
     }
 
     // Add to Keycloak org

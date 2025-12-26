@@ -5,10 +5,9 @@ import Button from '../../../components/Button';
 
 interface OnboardingSuccessViewProps {
   user: OidcUser;
-  onOpenCheckout: () => void;
 }
 
-const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onOpenCheckout }) => {
+const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user }) => {
   const isTrialing =
     (user.profile.context as any)?.user?.subscription_status !== 'active';
   const firstName = user.profile.name?.split(' ')[0] ?? 'there';
@@ -22,7 +21,7 @@ const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onO
 
       {isTrialing ? (
         <>
-          <p className='text-lg text-gray-600'>
+          <p className='text-lg text-gray-600 mb-8'>
             You're now on our unlimited free trial.
           </p>
           <div className='bg-gray-50 rounded-xl p-6 my-8 text-left space-y-2 border'>
@@ -35,16 +34,14 @@ const OnboardingSuccessView: React.FC<OnboardingSuccessViewProps> = ({ user, onO
             </p>
           </div>
           <div className='space-y-4 flex flex-col'>
-            <Button
-              onClick={onOpenCheckout}
-              variant='primary'
-              className='w-full'
-            >
-              Subscribe Now for Full Access
-            </Button>
+            <a href='/checkout'>
+              <Button variant='primary' className='w-full'>
+                Subscribe Now for Full Access
+              </Button>
+            </a>
             <a href='/dashboard'>
               <Button variant='secondary' className='w-full'>
-                Continue with Trial
+                Continue with Free Trial
               </Button>
             </a>
           </div>

@@ -8,6 +8,7 @@ import {
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
+import { PaddleClient } from "../../../lib/modules/paddle";
 
 export const prerender = false;
 const logger = getLogger();
@@ -64,6 +65,40 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
           .returning({ id: users.id })
       )[0].id;
 
+    // Ensure Paddle customer mapping exists for owner
+    let ownerPaddleCustomerId: string | null = null;
+    try {
+      const [existingPaddleCustomer] =
+        (await db
+          .select()
+          .from(paddleCustomers)
+          .where(eq(paddleCustomers.userId, userId))
+          .limit(1)) ?? [];
+
+      if (existingPaddleCustomer) {
+        ownerPaddleCustomerId = existingPaddleCustomer.paddleCustomerId;
+      } else {
+        const fullName =
+          kcUser.firstName && kcUser.lastName
+            ? `${kcUser.firstName} ${kcUser.lastName}`
+            : kcUser.firstName || kcUser.lastName || email.split("@")[0];
+
+        const paddleCustomer = await PaddleClient.setCustomer({
+          email,
+          ...(fullName ? { name: fullName } : {}),
+        });
+
+        if (paddleCustomer?.id) {
+          ownerPaddleCustomerId = paddleCustomer.id;
+          // Note: We no longer write to paddle_customers directly here.
+          // Paddle will send a webhook event (customer.updated or customer.created)
+          // which will update the paddle_customers table via the Paddle webhook handler.
+        }
+      }
+    } catch (e) {
+      logger.error(e, "Failed to ensure Paddle customer for org owner:");
+    }
+
     // Check if caller already belongs to an org
     const existingMembership = await db
       .select({
@@ -110,6 +145,30 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
         name: organizations.name,
         alias: organizations.alias,
       });
+
+    // Create a Paddle business for this org if we have a Paddle customer
+    if (ownerPaddleCustomerId) {
+      try {
+        const business = await PaddleClient.createBusinessForCustomer(
+          ownerPaddleCustomerId,
+          {
+            name,
+            // Basic payload - can be extended to include tax/address data later
+            address: {
+              country_code: "US",
+            },
+          },
+        );
+
+        if (business?.id) {
+          // Note: We no longer write to paddle_businesses directly here.
+          // Paddle will send a webhook event (business.updated or business.created)
+          // which will update the paddle_businesses table via the Paddle webhook handler.
+        }
+      } catch (e) {
+        logger.error(e, "Failed to create Paddle business for organization:");
+      }
+    }
 
     await db.insert(organizationMembers).values({
       orgId: orgRow.id,
