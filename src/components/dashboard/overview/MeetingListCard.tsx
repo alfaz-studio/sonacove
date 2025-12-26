@@ -61,7 +61,7 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
         <CardDescription>Manage your reserved rooms and past sessions.</CardDescription>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0 pr-3">
+      <CardContent className="flex-1 min-h-0 pr-0 pl-0">
         {!isLoggedIn ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4 min-h-[400px]">
             <div className="h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
@@ -89,11 +89,11 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 relative min-h-[400px]">
+            <div className="flex-1 relative min-h-[400px] overflow-hidden">
               <TabsContent value="reserved" className="absolute inset-0 m-0">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-full w-full pr-4">
                   {upcoming.length > 0 ? (
-                    <div className="space-y-3 pb-4">
+                    <div className="space-y-3 pb-4 pr-4 pl-4">
                       {upcoming.map((meeting) => (
                         <MeetingListItem key={meeting.id} meeting={meeting} onDelete={onDelete} />
                       ))}
@@ -105,9 +105,9 @@ const MeetingListCard: React.FC<MeetingListCardProps> = ({ meetings, onDelete })
               </TabsContent>
 
               <TabsContent value="past" className="absolute inset-0 m-0">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-full w-full pr-4">
                   {past.length > 0 ? (
-                    <div className="space-y-3 pb-4">
+                    <div className="space-y-3 pb-4 pr-4 pl-4">
                       {past.map((meeting) => (
                         <MeetingListItem key={meeting.id} meeting={meeting} onDelete={onDelete} />
                       ))}

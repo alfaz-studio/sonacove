@@ -163,7 +163,7 @@ const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Schedule Meeting</DialogTitle>
           <DialogDescription>
@@ -209,7 +209,7 @@ const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
           </div>
 
           {/* Time and Duration */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <Label htmlFor="start-time">Start Time</Label>
               <div className="relative">
@@ -256,26 +256,26 @@ const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-3">
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
+        <DialogFooter className="flex !flex-col gap-3 w-full">
+          <div className="flex flex-row gap-2 w-full">
             <Button
               variant="outline"
               onClick={handleDownloadICS}
-              className="flex-1"
+              className="flex-1 text-xs sm:text-sm"
             >
               Download ICS File
             </Button>
             <Button
               variant="outline"
               onClick={handleMicrosoftCalendar}
-              className="flex-1"
+              className="flex-1 text-xs sm:text-sm"
             >
               Microsoft Calendar
             </Button>
             <Button
               variant="outline"
               onClick={handleGoogleCalendar}
-              className="flex-1"
+              className="flex-1 text-xs sm:text-sm"
             >
               Google Calendar
             </Button>
@@ -296,4 +296,3 @@ const ScheduleMeetingDialog: React.FC<ScheduleMeetingDialogProps> = ({
 };
 
 export default ScheduleMeetingDialog;
-
