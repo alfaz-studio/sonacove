@@ -143,7 +143,7 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
     <Card className={`border-border shadow-sm bg-white ${!isLoggedIn ? 'h-full' : 'h-fit'}`}>
       <CardHeader>
         <CardTitle className="text-3xl font-bold text-gray-900">Start a Meeting</CardTitle>
-        <CardDescription>Create a secure room instantly or schedule for later.</CardDescription>
+        <CardDescription>Create a secure room instantly or reserve a room for your account.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4">
@@ -183,7 +183,7 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
               className="w-full border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm h-10 disabled:opacity-70"
               disabled={isBookButtonDisabled}
             >
-              {isBooking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Book for Later'}
+              {isBooking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Reserve Room'}
             </Button>
           </div>
 

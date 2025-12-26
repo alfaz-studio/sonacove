@@ -7,6 +7,10 @@ import {
   Trash2, 
   Clock,
   Loader2,
+  Calendar,
+  MoreVertical,
+  ExternalLink,
+  Copy,
 } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -16,21 +20,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import type { Meeting } from './MeetingListCard';
 import { formatDurationMs } from '@/components/lib/utils';
 import CopyIcon from '@/components/CopyIcon';
+import ScheduleMeetingDialog from './ScheduleMeetingDialog';
 
-const MeetingStatusBadge = ({ status }: { status: 'Upcoming' | 'Expired' | 'Past' }) => {
+const MeetingStatusBadge = ({ status }: { status: 'Reserved' | 'Expired' | 'Past' }) => {
   if (status === 'Past') return;
 
   const styles = {
-    Upcoming: "bg-green-100 text-green-800 border-green-200",
+    Reserved: "bg-green-100 text-green-800 border-green-200",
     Expired: "bg-yellow-100 text-yellow-800 border-yellow-200",
   };
 
   const icons = {
-    Upcoming: <CircleCheck className="w-3 h-3" />,
+    Reserved: <CircleCheck className="w-3 h-3" />,
     Expired: <AlertTriangle className="w-3 h-3" />,
   };
 
@@ -49,6 +60,7 @@ interface MeetingListItemProps {
 
 const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -64,13 +76,14 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
   const formattedDate = format(dateObj, 'MMM d, yyyy');
   const formattedTime = format(dateObj, 'h:mm a');
   
-  let status: 'Upcoming' | 'Past' = 'Past';
+  let status: 'Reserved' | 'Past' = 'Past';
   if (isAfter(dateObj, new Date())) {
-    status = 'Upcoming';
+    status = 'Reserved';
   }
 
   const meetingUrl = `/meet/${meeting.title}`; 
   const fullUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${meetingUrl}`;
+  const isReservedRoom = status === 'Reserved';
 
   return (
     <div className={`group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border border-gray-100 bg-white transition-all duration-200 w-full ${isDeleting ? 'opacity-50 pointer-events-none' : 'hover:border-primary-200 hover:shadow-sm'}`}>
@@ -110,8 +123,8 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
       {/*  Actions Section */}
       <div className="flex items-center w-full sm:w-auto mt-2 pt-3 border-t border-gray-100 sm:border-0 sm:mt-0 sm:pt-0 sm:ml-auto gap-2 opacity-100">
         
-        {/* Copy & Delete Group */}
-        <div className="flex items-center gap-1">
+        {/* Desktop Actions - Copy & Delete */}
+        <div className="hidden sm:flex items-center gap-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -142,18 +155,102 @@ const MeetingListItem: React.FC<MeetingListItemProps> = ({ meeting, onDelete }) 
             </Tooltip>
           </TooltipProvider>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        <div className="sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-gray-400 hover:text-gray-600"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigator.clipboard.writeText(fullUrl);
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Link
+              </DropdownMenuItem>
+              {isReservedRoom && (
+                <DropdownMenuItem onClick={() => setIsScheduleDialogOpen(true)}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Schedule
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem asChild>
+                <a href={meetingUrl} className="flex items-center">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Join
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-red-600 focus:text-red-600"
+              >
+                {isDeleting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         
-        {/* Join Button */}
-        <Button 
-          size="sm" 
-          asChild 
-          className="ml-auto mr-4 sm:ml-2 bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-9 text-sm font-semibold cursor-pointer shadow-none px-4"
-        >
-          <a href={meetingUrl} className="flex items-center gap-2">
-            Join
-          </a>
-        </Button>
+        {/* Desktop Schedule Button - Only for reserved rooms */}
+        {isReservedRoom && (
+          <div className="hidden sm:block">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsScheduleDialogOpen(true)}
+                    className="bg-white text-gray-700 hover:bg-gray-50 border-gray-200 h-9 text-sm font-semibold px-4"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Schedule this meeting in your calendar</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
+        {/* Desktop Join Button */}
+        <div className="hidden sm:block">
+          <Button 
+            size="sm" 
+            asChild 
+            className="bg-primary-50 text-primary-600 hover:bg-primary-100 hover:text-primary-700 border-transparent h-9 text-sm font-semibold cursor-pointer shadow-none px-4"
+          >
+            <a href={meetingUrl} className="flex items-center gap-2">
+              Join
+            </a>
+          </Button>
+        </div>
       </div>
+
+      {/* Schedule Meeting Dialog */}
+      {isReservedRoom && (
+        <ScheduleMeetingDialog
+          open={isScheduleDialogOpen}
+          onOpenChange={setIsScheduleDialogOpen}
+          roomName={meeting.title}
+          meetingUrl={fullUrl}
+        />
+      )}
     </div>
   );
 };
