@@ -18,8 +18,11 @@ const {
   type = "website",
 } = Astro.props;
 
-// Ensure image URL is absolute and accessible
-const socialImage = image.startsWith('http') ? image : new URL(image, url).toString();
+// Ensure image URL is absolute and accessible (force HTTPS for social platforms)
+// const socialImage = image.startsWith('http') 
+//   ? image.replace(/^http:/, 'https:') 
+//   : new URL(image, url).toString().replace(/^http:/, 'https:');
+const socialImage = image;
 
 // Generate canonical URL
 const canonicalUrl = new URL(url + Astro.url.pathname);
@@ -43,10 +46,13 @@ const canonicalUrl = new URL(url + Astro.url.pathname);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={socialImage} />
+    <meta property="og:image:secure_url" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sonacove Meets - Secure online meetings" />
     <meta property="og:site_name" content="Sonacove Meets" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
