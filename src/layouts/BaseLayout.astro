@@ -13,20 +13,33 @@ interface Props {
 const {
   title,
   description = "Fast, simple, and secure online meetings with a focus on ethics and privacy.",
-  image = "https://sonacove.com/og.jpg",
-  url = "https://sonacove.com",
+  image,
+  url,
   type = "website",
 } = Astro.props;
 
-// Ensure image URL is absolute and accessible (force HTTPS for social platforms)
-const socialImage = image.startsWith('http') 
-  ? image.replace(/^http:/, 'https:') 
-  : new URL(image, url).toString().replace(/^http:/, 'https:');
-// const socialImage = "https://sonacove.com/hotlink-ok/og-image.png"; 
+// Get the current deployment origin from the request URL
+const currentOrigin = Astro.url.origin;
+const baseUrl = url || currentOrigin;
+
+// Default image path relative to current deployment
+const defaultImagePath = "/og.jpg";
+
+// Construct social image URL based on current deployment
+// If image prop is provided and is absolute, use it; otherwise construct from current origin
+const socialImage = image
+  ? (image.startsWith('http') 
+      ? image.replace(/^http:/, 'https:') 
+      : new URL(image.startsWith('/') ? image : '/' + image, currentOrigin).toString())
+  : new URL(defaultImagePath, currentOrigin).toString();
+  
+
+  console.log("socialImage:",socialImage);
+  // const socialImage = "https://sonacove.com/hotlink-ok/og-image.png"; 
 // "https://sonacove.com/og.jpg" -- image size 168kB
 
-// Generate canonical URL
-const canonicalUrl = new URL(url + Astro.url.pathname);
+// Generate canonical URL using current deployment origin
+const canonicalUrl = new URL(Astro.url.pathname, baseUrl);
 ---
 
 <!doctype html>
@@ -48,7 +61,7 @@ const canonicalUrl = new URL(url + Astro.url.pathname);
     <meta property="og:description" content={description} />
     <meta property="og:image" content={socialImage} />
     <meta property="og:image:secure_url" content={socialImage} />
-    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sonacove Meets - Secure online meetings" />
