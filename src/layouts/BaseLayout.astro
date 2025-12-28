@@ -13,16 +13,17 @@ interface Props {
 const {
   title,
   description = "Fast, simple, and secure online meetings with a focus on ethics and privacy.",
-  image = "https://sonacove.com/hotlink-ok/og-image.png",
+  image = "https://sonacove.com/og.jpg",
   url = "https://sonacove.com",
   type = "website",
 } = Astro.props;
 
 // Ensure image URL is absolute and accessible (force HTTPS for social platforms)
-// const socialImage = image.startsWith('http') 
-//   ? image.replace(/^http:/, 'https:') 
-//   : new URL(image, url).toString().replace(/^http:/, 'https:');
-const socialImage = image;
+const socialImage = image.startsWith('http') 
+  ? image.replace(/^http:/, 'https:') 
+  : new URL(image, url).toString().replace(/^http:/, 'https:');
+// const socialImage = "https://sonacove.com/hotlink-ok/og-image.png"; 
+// "https://sonacove.com/og.jpg" -- image size 168kB
 
 // Generate canonical URL
 const canonicalUrl = new URL(url + Astro.url.pathname);
