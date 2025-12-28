@@ -152,7 +152,8 @@ jobs:
             **Status:** ✅ Successfully deployed
             **Deployment Type:** Version Upload + Deploy
             **Preview URL:** ${{ steps.upload.outputs.deployment-url || 'Preview deployment created successfully' }}
-            **Commit:** ${{ github.sha }}
+            **Merge Commit:** ${{ github.sha }}
+            **Last Commit:** ${{ (github.event.pull_request.head.sha || github.sha) | truncate(7) }}
 
             ---
             *This comment will be automatically updated when new commits are pushed.*
