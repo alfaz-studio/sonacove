@@ -138,6 +138,23 @@ class AuthService {
    */
   public login(): Promise<void> {
     this.ensureBrowser();
+
+    // @ts-ignore
+    if (window.jitsiNodeAPI) {
+        console.log("🖥️ Electron detected: Delegating login to system browser...");
+        
+        // 1. Construct the URL for the proxy page
+        // This page will start the OIDC flow inside Chrome
+        const targetUrl = `${window.location.origin}/login-desktop-proxy`; 
+        
+        // 2. Tell Electron to open this URL externally
+        // @ts-ignore
+        window.jitsiNodeAPI.ipc.send('open-external', targetUrl);
+        
+        // 3. Stop execution here so Electron doesn't start its own flow
+        return Promise.resolve();
+    }
+
     return this.userManager.signinRedirect({
       state: window.location.pathname + window.location.search,
     });
@@ -171,6 +188,18 @@ class AuthService {
    */
   public logout(): Promise<void> {
     this.ensureBrowser();
+
+    // @ts-ignore
+    if (window.jitsiNodeAPI) {
+        console.log("🖥️ Electron detected: Delegating logout to system browser...");
+        
+        // 1. Open the proxy logout page in browser
+        const targetUrl = `${window.location.origin}/logout-desktop-proxy`;
+        
+        // @ts-ignore
+        window.jitsiNodeAPI.ipc.send('open-external', targetUrl);
+        return Promise.resolve();
+    }
     sessionStorage.setItem('logout_return_url', window.location.href);
     return this.userManager.signoutRedirect();
   }
