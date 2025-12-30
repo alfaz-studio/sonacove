@@ -13,20 +13,20 @@ interface Props {
 const {
   title,
   description = "Fast, simple, and secure online meetings with a focus on ethics and privacy.",
-  image = "https://sonacove.com/hotlink-ok/og-image.png",
+  image = "https://sonacove.com/og.jpg",
   url = "https://sonacove.com",
   type = "website",
 } = Astro.props;
 
 // Ensure image URL is absolute and accessible
-const socialImage = image.startsWith('http') ? image : new URL(image, url).toString();
+const socialImage = image;
 
 // Generate canonical URL
 const canonicalUrl = new URL(url + Astro.url.pathname);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en">  
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -43,10 +43,13 @@ const canonicalUrl = new URL(url + Astro.url.pathname);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={socialImage} />
+    <meta property="og:image:secure_url" content={socialImage} />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sonacove Meets - Secure online meetings" />
     <meta property="og:site_name" content="Sonacove Meets" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
