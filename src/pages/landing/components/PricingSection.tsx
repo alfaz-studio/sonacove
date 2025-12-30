@@ -11,8 +11,10 @@ import PricingCard from './PricingCard';
 import {
   PUBLIC_CF_ENV,
   PUBLIC_PADDLE_CLIENT_TOKEN,
-  PUBLIC_PADDLE_ORGANIZATION_PRICE_ID,
-  PUBLIC_PADDLE_PREMIUM_PRICE_ID,
+  PUBLIC_PADDLE_INDIVIDUAL_MONTHLY_PRICE_ID,
+  PUBLIC_PADDLE_INDIVIDUAL_ANNUAL_PRICE_ID,
+  PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID,
+  PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID,
 } from 'astro:env/client';
 
 // initial static plan data
@@ -88,8 +90,8 @@ export default function PricingSection() {
 
         const result = await paddle.PricePreview({
           items: [
-            { priceId: PUBLIC_PADDLE_PREMIUM_PRICE_ID, quantity: 1 },
-            { priceId: PUBLIC_PADDLE_ORGANIZATION_PRICE_ID, quantity: 1 },
+            { priceId: billingCycle === 'Monthly billing' ? PUBLIC_PADDLE_INDIVIDUAL_MONTHLY_PRICE_ID : PUBLIC_PADDLE_INDIVIDUAL_ANNUAL_PRICE_ID, quantity: 1 },
+            { priceId: billingCycle === 'Monthly billing' ? PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID : PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID, quantity: 1 },
           ],
         });
 
@@ -152,7 +154,7 @@ export default function PricingSection() {
     }
 
     initPaddle();
-  }, []);
+  }, [ billingCycle ]);
 
     return (
       <section className='py-20 md:py-28 bg-[#F9FAFB]' id='pricing'>
@@ -163,11 +165,11 @@ export default function PricingSection() {
               Plans designed for educators
             </SectionHeader>
 
-            {/* <ToggleSwitch
+            <ToggleSwitch
               options={['Monthly billing', 'Annual billing']}
               activeOption={billingCycle}
               onOptionChange={setBillingCycle}
-            /> */}
+            />
           </div>
 
           <div className='mt-16 w-full mx-auto lg:max-w-7xl lg:grid lg:grid-cols-3 lg:gap-8 lg:items-stretch'>
