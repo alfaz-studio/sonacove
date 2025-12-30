@@ -13,36 +13,16 @@ interface Props {
 const {
   title,
   description = "Fast, simple, and secure online meetings with a focus on ethics and privacy.",
-  image,
-  url,
+  image = "https://sonacove.catfurr.workers.dev/og.jpg",
+  url = "https://sonacove.com",
   type = "website",
 } = Astro.props;
 
-// Get the actual deployment origin from request headers (more reliable than Astro.url in some cases)
-// Try to get the host from request headers first, fall back to Astro.url
-const hostHeader = Astro.request.headers.get('host') || Astro.request.headers.get('x-forwarded-host');
-const protocol = Astro.url.protocol === 'https:' || hostHeader ? 'https:' : Astro.url.protocol;
-const currentOrigin = hostHeader 
-  ? `${protocol}//${hostHeader}`
-  : Astro.url.origin;
+// Ensure image URL is absolute and accessible
+const socialImage = image;
 
-// Use provided url prop or fall back to current origin, always prefer HTTPS
-const baseUrl = url || (currentOrigin.startsWith('http://') ? currentOrigin.replace('http://', 'https://') : currentOrigin);
-
-// Default image path relative to current deployment
-const defaultImagePath = "/og.jpg";
-
-// Generate canonical URL using base URL (this ensures it uses deployment URL)
-const canonicalUrl = new URL(Astro.url.pathname, baseUrl);
-
-// Construct social image URL using the same base as canonical URL
-// This ensures it always uses the deployment URL, not localhost
-// If image prop is provided and is absolute, use it; otherwise construct from baseUrl
-const socialImage = image
-  ? (image.startsWith('http') 
-      ? image.replace(/^http:/, 'https:') 
-      : new URL(image.startsWith('/') ? image : '/' + image, baseUrl).toString().replace(/^http:/, 'https:'))
-  : new URL(defaultImagePath, baseUrl).toString().replace(/^http:/, 'https:');
+// Generate canonical URL
+const canonicalUrl = new URL(url + Astro.url.pathname);
 ---
 
 <!doctype html>
