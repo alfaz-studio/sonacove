@@ -6,6 +6,9 @@ import { verifyWebhookSignature } from "../../lib/modules/jwt";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
 import type { APIRoute } from "astro";
 import { KC_WEBHOOK_SECRET } from "astro:env/server";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { createDb } from "@/lib/db/drizzle";
 
 
 export const prerender = false;

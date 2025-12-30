@@ -4,6 +4,7 @@ import { createDb } from "../../../lib/db/drizzle";
 import {
   organizationMembers,
   organizations,
+  paddleCustomers,
   users,
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
