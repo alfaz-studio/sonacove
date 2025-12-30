@@ -70,6 +70,18 @@ export default function PricingSection() {
   const [plans, setPlans] = useState(initialPlans);
   const [billingCycle, setBillingCycle] = useState('Monthly billing');
 
+  const billingOptions = [
+    { 
+      label: 'Monthly', 
+      value: 'Monthly billing' 
+    },
+    { 
+      label: 'Annual', 
+      value: 'Annual billing', 
+      badge: '15% less'
+    },
+  ];
+
   useEffect(() => {
     async function initPaddle() {
       try {
@@ -166,7 +178,7 @@ export default function PricingSection() {
             </SectionHeader>
 
             <ToggleSwitch
-              options={['Monthly billing', 'Annual billing']}
+              options={billingOptions}
               activeOption={billingCycle}
               onOptionChange={setBillingCycle}
             />
