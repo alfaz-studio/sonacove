@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client';
 import StartMeeting from './StartMeeting';
 import UserCard from './UserCard';
 import Header from '../../../components/Header';
@@ -12,7 +14,7 @@ import { showPopup } from '../../../utils/popupService';
 import type { AppUser } from '../types';
 import meet_background from '../../../assets/meet-background.png';
 
-export default function Meet() {
+function MeetContent() {
   const { isLoggedIn, dbUser, user: oidcUser, meetings: meetingsList, refetchMeetings } = useAuth();
 
   const [appUser, setAppUser] = useState<AppUser | null>(null);
@@ -100,5 +102,13 @@ export default function Meet() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function Meet() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MeetContent />
+    </QueryClientProvider>
   );
 }

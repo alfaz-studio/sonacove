@@ -5,6 +5,7 @@ import {
   organizationMembers,
   organizations,
   users,
+  paddleSubscriptions,
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../../lib/modules/pino-logger";
@@ -75,6 +76,23 @@ const meHandler: APIRoute = async ({ request, locals }) => {
       .innerJoin(users, eq(organizationMembers.userId, users.id))
       .where(eq(organizationMembers.orgId, org.orgId));
 
+    // Compute seat usage based on active + pending members
+    const seatsUsed = dbMembers.filter(
+      (m) => m.status === "active" || m.status === "pending",
+    ).length;
+
+    // Find org subscription (if any)
+    const [orgSubscription] =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(eq(paddleSubscriptions.orgId, org.orgId))
+        .limit(1)) ?? [];
+
+    const seatsTotal = orgSubscription?.quantity ?? null;
+    const seatsAvailable =
+      seatsTotal !== null ? Math.max(0, seatsTotal - seatsUsed) : null;
+
     // Reconcile with Keycloak: check if pending members are now active in KC
     const kcMembers = await keycloakClient.getOrganizationMembers(org.kcOrgId);
     const kcMemberIds = new Set(kcMembers.map((m) => m.id));
@@ -129,6 +147,15 @@ const meHandler: APIRoute = async ({ request, locals }) => {
           alias: org.orgAlias,
           role: org.role,
           members,
+          subscription: orgSubscription
+            ? {
+                status: orgSubscription.status,
+                quantity: orgSubscription.quantity,
+                seatsUsed,
+                seatsTotal,
+                seatsAvailable,
+              }
+            : null,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },

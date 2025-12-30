@@ -220,6 +220,33 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
       // Build participants array (emails when available, otherwise guest names)
       const participantsArray = Array.from(participantsSet);
+      // Build participantNames array aligned with participantsArray
+      const participantNamesArray: string[] = participantsArray.map((identifier) => {
+        const meta = participantMap.get(identifier);
+        // Prefer explicit name from metadata if available
+        if (meta?.name) return meta.name;
+
+        // If we have an email, format it nicely
+        if (meta?.email) {
+          const namePart = meta.email.split("@")[0];
+          return namePart
+            .split(".")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ");
+        }
+
+        // Fallback: if identifier itself looks like an email, format from that
+        if (identifier.includes("@") && !identifier.startsWith("Guest")) {
+          const namePart = identifier.split("@")[0];
+          return namePart
+            .split(".")
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(" ");
+        }
+
+        // Otherwise use identifier as-is (covers "Guest 1", etc.)
+        return identifier;
+      });
 
       // Check if user participated in this meeting (as host or participant)
       const userParticipated = 
@@ -243,6 +270,7 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
         hostNames: hostNamesArray,
         duration: durationMinutes,
         participants: participantsArray,
+        participantNames: participantNamesArray,
         participantCount: participantsArray.length,
         status: status,
         recordings: [], // Empty for now

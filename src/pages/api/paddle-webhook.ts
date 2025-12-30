@@ -1,8 +1,17 @@
 import { KeycloakClient } from "../../lib/modules/keycloak";
 import { PaddleClient, type PaddleWebhookData, type PaddleWebhookEvent } from "../../lib/modules/paddle";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
+import { createDb } from "../../lib/db/drizzle";
+import {
+  paddleSubscriptions,
+  paddleSubscriptionItems,
+  paddleCustomers,
+  paddleBusinesses,
+  organizations,
+  users,
+} from "../../lib/db/schema";
+import { eq } from "drizzle-orm";
 
-import { capturePosthogEvent } from "../../lib/modules/posthog";
 import type { APIRoute } from "astro";
 
 
@@ -42,6 +51,10 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       "subscription.created",
       "transaction.updated",
       "subscription.updated",
+      "customer.created",
+      "customer.updated",
+      "business.created",
+      "business.updated",
     ];
 
     if (!validEventTypes.includes(event.event_type)) {
@@ -57,7 +70,7 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (e) {
-    logger.error("Error handling Paddle webhook:");
+    logger.error(e, "Error handling Paddle webhook:");
     return new Response("Internal server error", { status: 500 });
   }
 };
@@ -73,9 +86,22 @@ async function processWebhookEvent(event: PaddleWebhookEvent, runtime: Runtime["
     // Log the extracted data for debugging
     logger.info(extractedData, "Extracted Paddle data:");
 
-    // Process the subscription data and update Keycloak
+    // Process customer events: sync to DB
+    if (extractedData.customer) {
+      await upsertCustomerFromWebhook(extractedData);
+    }
+
+    // Process business events: sync to DB
+    if (extractedData.business) {
+      await upsertBusinessFromWebhook(extractedData);
+    }
+
+    // Process the subscription data: sync to DB and update Keycloak
     let user = undefined;
     if (extractedData.subscription) {
+      // Mirror subscription into local DB
+      await upsertSubscriptionFromWebhook(extractedData);
+
       user = await processSubscriptionUpdate(extractedData, runtime);
       // Subscription activation event
       if (event.event_type === "subscription.created" && user) {
@@ -113,6 +139,262 @@ async function processWebhookEvent(event: PaddleWebhookEvent, runtime: Runtime["
     logger.info(`Successfully processed ${event.event_type} event`);
   } catch (e) {
     logger.error(e, "Error processing webhook event:");
+  }
+}
+
+/**
+ * Upsert subscription and paddle_subscription_items from Paddle webhook into local DB.
+ * Uses Paddle as source-of-truth and links to users/orgs via paddle_customers.
+ */
+async function upsertSubscriptionFromWebhook(extractedData: PaddleWebhookData) {
+  const sub = extractedData.subscription;
+  if (!sub) return;
+
+  try {
+    const db = createDb();
+
+    // Derive aggregate quantity from items (seats)
+    const totalQuantity =
+      sub.items?.reduce((sum, item) => sum + (item.quantity ?? 0), 0) || 1;
+
+    // Resolve local user/org via paddle_customers and organizations
+    let userId: number | null = null;
+    let orgId: number | null = null;
+    let isOrgSubscription = false;
+
+    if (sub.customer_id) {
+      const [pc] =
+        (await db
+          .select()
+          .from(paddleCustomers)
+          .where(eq(paddleCustomers.paddleCustomerId, sub.customer_id))
+          .limit(1)) ?? [];
+
+      if (pc?.userId) {
+        userId = pc.userId;
+
+        // If this user owns an org, treat this as an org subscription for now
+        const [org] =
+          (await db
+            .select()
+            .from(organizations)
+            .where(eq(organizations.ownerUserId, pc.userId))
+            .limit(1)) ?? [];
+
+        if (org?.id) {
+          orgId = org.id;
+          isOrgSubscription = true;
+        }
+      }
+    }
+
+    // Upsert into paddle_subscriptions table
+    const existing =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(eq(paddleSubscriptions.paddleSubscriptionId, sub.id))
+        .limit(1)) ?? [];
+
+    let subscriptionRowId: number;
+
+    if (existing.length > 0) {
+      const current = existing[0];
+      await db
+        .update(paddleSubscriptions)
+        .set({
+          paddleCustomerId: sub.customer_id,
+          status: sub.status,
+          collectionMode: sub.collection_mode,
+          quantity: totalQuantity,
+          userId: userId ?? current.userId,
+          orgId: orgId ?? current.orgId,
+          isOrgSubscription:
+            typeof current.isOrgSubscription === "boolean"
+              ? current.isOrgSubscription
+              : isOrgSubscription,
+          rawPayload: sub,
+          updatedAt: new Date(),
+        })
+        .where(eq(paddleSubscriptions.id, current.id));
+      subscriptionRowId = current.id;
+    } else {
+      const [inserted] = await db
+        .insert(paddleSubscriptions)
+        .values({
+          paddleSubscriptionId: sub.id,
+          paddleCustomerId: sub.customer_id,
+          status: sub.status,
+          collectionMode: sub.collection_mode,
+          quantity: totalQuantity,
+          userId,
+          orgId,
+          isOrgSubscription,
+          rawPayload: sub,
+        })
+        .returning({ id: paddleSubscriptions.id });
+      subscriptionRowId = inserted.id;
+    }
+
+    // Mirror items into paddle_subscription_items
+    if (sub.items && sub.items.length > 0) {
+      // Clear previous items
+      await db
+        .delete(paddleSubscriptionItems)
+        .where(eq(paddleSubscriptionItems.subscriptionId, subscriptionRowId));
+
+      // Insert current items
+      for (const item of sub.items) {
+        await db.insert(paddleSubscriptionItems).values({
+          subscriptionId: subscriptionRowId,
+          paddlePriceId: item.price_id,
+          productType: "org_seats",
+          quantity: item.quantity ?? 1,
+          rawItem: item,
+        });
+      }
+    }
+  } catch (e) {
+    logger.error(e, "Error upserting subscription from Paddle webhook:");
+  }
+}
+
+/**
+ * Upsert customer from Paddle webhook into local DB.
+ * Uses Paddle as source-of-truth and links to users via email.
+ */
+async function upsertCustomerFromWebhook(extractedData: PaddleWebhookData) {
+  const customer = extractedData.customer;
+  if (!customer) return;
+
+  try {
+    const db = createDb();
+
+    // Find user by email to link the customer
+    const [dbUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, customer.email))
+      .limit(1);
+
+    if (!dbUser) {
+      logger.warn(
+        `Skipping Paddle customer ${customer.id} (${customer.email}) - no matching user in database`
+      );
+      return;
+    }
+
+    // Check if paddle_customer already exists
+    const existing = await db
+      .select()
+      .from(paddleCustomers)
+      .where(eq(paddleCustomers.paddleCustomerId, customer.id))
+      .limit(1);
+
+    const customerData = {
+      paddleCustomerId: customer.id,
+      userId: dbUser.id,
+      email: customer.email,
+      name: customer.name,
+      rawPayload: customer as any,
+      updatedAt: new Date(),
+    };
+
+    if (existing.length > 0) {
+      // Update existing
+      await db
+        .update(paddleCustomers)
+        .set(customerData)
+        .where(eq(paddleCustomers.id, existing[0].id));
+    } else {
+      // Create new
+      await db.insert(paddleCustomers).values({
+        ...customerData,
+        createdAt: new Date(),
+      });
+    }
+  } catch (e) {
+    logger.error(e, "Error upserting customer from Paddle webhook:");
+  }
+}
+
+/**
+ * Upsert business from Paddle webhook into local DB.
+ * Uses Paddle as source-of-truth and links to organizations via paddle_customer.
+ */
+async function upsertBusinessFromWebhook(extractedData: PaddleWebhookData) {
+  const business = extractedData.business;
+  if (!business || !business.customer_id) return;
+
+  try {
+    const db = createDb();
+
+    // Find the paddle_customer to get the user_id
+    const [paddleCustomer] = await db
+      .select()
+      .from(paddleCustomers)
+      .where(eq(paddleCustomers.paddleCustomerId, business.customer_id))
+      .limit(1);
+
+    if (!paddleCustomer) {
+      logger.warn(
+        `Skipping Paddle business ${business.id} - customer ${business.customer_id} not found in paddle_customers`
+      );
+      return;
+    }
+
+    // Find organization owned by this user
+    const [org] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.ownerUserId, paddleCustomer.userId))
+      .limit(1);
+
+    if (!org) {
+      logger.warn(
+        `Skipping Paddle business ${business.id} - owner user ${paddleCustomer.userId} has no organization`
+      );
+      return;
+    }
+
+    // Check if paddle_business already exists
+    const existing = await db
+      .select()
+      .from(paddleBusinesses)
+      .where(eq(paddleBusinesses.paddleBusinessId, business.id))
+      .limit(1);
+
+    const businessData = {
+      paddleBusinessId: business.id,
+      paddleCustomerId: business.customer_id,
+      orgId: org.id,
+      name: business.name,
+      taxId: business.tax_identifier || null,
+      country: business.address?.country_code || null,
+      city: business.address?.city || null,
+      region: business.address?.region || null,
+      postalCode: business.address?.postal_code || null,
+      addressLine1: business.address?.line1 || null,
+      addressLine2: business.address?.line2 || null,
+      rawPayload: business as any,
+      updatedAt: new Date(),
+    };
+
+    if (existing.length > 0) {
+      // Update existing
+      await db
+        .update(paddleBusinesses)
+        .set(businessData)
+        .where(eq(paddleBusinesses.id, existing[0].id));
+    } else {
+      // Create new
+      await db.insert(paddleBusinesses).values({
+        ...businessData,
+        createdAt: new Date(),
+      });
+    }
+  } catch (e) {
+    logger.error(e, "Error upserting business from Paddle webhook:");
   }
 }
 

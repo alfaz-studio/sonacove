@@ -1,13 +1,14 @@
 import { KeycloakClient } from "./keycloak";
 import { getEmailFromJWT } from "./jwt";
 import { getLogger } from "./pino-logger";
+import type { KeycloakUser } from "./keycloak-types";
 
 const logger = getLogger();
 
 export interface AuthResult {
   email: string;
   keycloakClient: KeycloakClient;
-  kcUser: { id: string; email?: string };
+  kcUser: KeycloakUser;
 }
 
 /**
