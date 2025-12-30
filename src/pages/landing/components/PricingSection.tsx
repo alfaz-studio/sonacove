@@ -22,7 +22,7 @@ const initialPlans: Plan[] = [
   {
     title: 'Free Plan',
     price: '$0.0',
-    billingInfo: 'Per user/month, billed annually',
+    billingInfo: 'Per user/month',
     icon: <Smile />,
     features: [
       'Up to 1000 total meeting minutes',
@@ -38,7 +38,7 @@ const initialPlans: Plan[] = [
   {
     title: 'Premium Plan',
     price: '$10.0',
-    billingInfo: 'Per user/month, billed annually',
+    billingInfo: 'Per user/month',
     icon: <UsersRound />,
     features: [
       'Unlimited meeting duration',
@@ -54,12 +54,12 @@ const initialPlans: Plan[] = [
   {
     title: 'Organization Plan',
     price: '$20.0',
-    billingInfo: 'Per user/month, billed annually',
+    billingInfo: 'Per user/month',
     icon: <School />,
     features: [
       'All Premium features',
       'Up to 1000 guests',
-      'Custom Authentication',
+      'Custom authentication & org management',
     ],
     highlighted: false,
     button: { text: 'Contact Us', link: 'mailto:support@sonacove.com' },
@@ -100,61 +100,84 @@ export default function PricingSection() {
           return;
         }
 
+        const isAnnual = billingCycle === 'Annual billing';
+
         const result = await paddle.PricePreview({
           items: [
-            { priceId: billingCycle === 'Monthly billing' ? PUBLIC_PADDLE_INDIVIDUAL_MONTHLY_PRICE_ID : PUBLIC_PADDLE_INDIVIDUAL_ANNUAL_PRICE_ID, quantity: 1 },
-            { priceId: billingCycle === 'Monthly billing' ? PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID : PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID, quantity: 1 },
+            { priceId: !isAnnual ? PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID : PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID, quantity: 1 },
+            { priceId: !isAnnual ? PUBLIC_PADDLE_INDIVIDUAL_MONTHLY_PRICE_ID : PUBLIC_PADDLE_INDIVIDUAL_ANNUAL_PRICE_ID, quantity: 1 },
           ],
         });
 
         const prices = result.data.details.lineItems;
+
+        // Get Base Data
         const premiumData = floorPrice(prices[0].formattedUnitTotals.total);
         const orgData = floorPrice(prices[1].formattedUnitTotals.total);
-        const freeData = {
-          numeric: 0,
-          currencySymbol: premiumData.currencySymbol,
-          formatted: `${premiumData.currencySymbol}0`,
-        };
 
-        const premiumDiscount =
-          Number(prices[0].price.customData?.discount) || 0;
+        // Get Discounts
+        const premiumDiscount = Number(prices[0].price.customData?.discount) || 0;
         const orgDiscount = Number(prices[1].price.customData?.discount) || 0;
 
-        const premiumDiscounted = applyDiscount(
-          premiumData.numeric,
-          premiumDiscount,
-        );
-        const orgDiscounted = applyDiscount(orgData.numeric, orgDiscount);
+        // Calculate Totals (Numeric)
+        let premiumBaseNumeric = premiumData.numeric;
+        let orgBaseNumeric = orgData.numeric;
+        let premiumDiscountedNumeric = applyDiscount(premiumData.numeric, premiumDiscount);
+        let orgDiscountedNumeric = applyDiscount(orgData.numeric, orgDiscount);
 
-        const premiumDiscountedFormatted = `${
-          premiumData.currencySymbol
-        }${premiumDiscounted.toFixed(2)}`;
-        const orgDiscountedFormatted = `${
-          orgData.currencySymbol
-        }${orgDiscounted.toFixed(2)}`;
+        // IF ANNUAL: DIVIDE BY 12
+        if (isAnnual) {
+          premiumBaseNumeric = premiumBaseNumeric / 12;
+          orgBaseNumeric = orgBaseNumeric / 12;
+          premiumDiscountedNumeric = premiumDiscountedNumeric / 12;
+          orgDiscountedNumeric = orgDiscountedNumeric / 12;
+        }
+
+        // Format Strings for Display
+        const currency = premiumData.currencySymbol; // Assuming same currency for all
+
+        // Base Prices (Strikethrough price if discounted, or main price if no discount)
+        const premiumFormatted = `${currency}${premiumBaseNumeric.toFixed(2)}`;
+        const orgFormatted = `${currency}${orgBaseNumeric.toFixed(2)}`;
+
+        // Discounted Prices (The highlighted price)
+        const premiumDiscountedFormatted = `${currency}${premiumDiscountedNumeric.toFixed(2)}`;
+        const orgDiscountedFormatted = `${currency}${orgDiscountedNumeric.toFixed(2)}`;
+
+        const freeData = {
+          formatted: `${currency}0`,
+        };
+
+        const currentBillingInfo = isAnnual 
+          ? 'Per user/month, billed annually' 
+          : 'Per user/month, billed monthly';
 
         // update state with new prices
         setPlans((prev) =>
           prev.map((plan) => {
             if (plan.title === 'Free Plan') {
-              return { ...plan, price: freeData.formatted };
+              return { 
+                ...plan, 
+                price: freeData.formatted,
+                billingInfo: currentBillingInfo 
+              };
             }
             if (plan.title === 'Premium Plan') {
               return {
                 ...plan,
-                price: premiumData.formatted,
+                price: premiumFormatted,
                 discount: premiumDiscount,
-                priceWithDiscount:
-                  premiumDiscount > 0 ? premiumDiscountedFormatted : null,
+                priceWithDiscount: premiumDiscount > 0 ? premiumDiscountedFormatted : null,
+                billingInfo: currentBillingInfo,
               };
             }
             if (plan.title === 'Organization Plan') {
               return {
                 ...plan,
-                price: orgData.formatted,
+                price: orgFormatted,
                 discount: orgDiscount,
-                priceWithDiscount:
-                  orgDiscount > 0 ? orgDiscountedFormatted : null,
+                priceWithDiscount: orgDiscount > 0 ? orgDiscountedFormatted : null,
+                billingInfo: currentBillingInfo,
               };
             }
             return plan;
