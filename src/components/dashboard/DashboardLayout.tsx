@@ -47,6 +47,8 @@ import { usePopup } from '../../hooks/usePopup';
 import { useAuth } from '@/hooks/useAuth';
 import { getGravatarUrl } from '../../utils/gravatar';
 import LoginRequired from './LoginRequired';
+import { getUserManager } from '@/utils/AuthService';
+import { User as _User } from 'oidc-client-ts';
 
 interface DashboardLayoutProps {}
 
@@ -91,10 +93,47 @@ const DashboardLayoutInner: React.FC = () => {
   const { popup, hidePopup } = usePopup();
 
   useEffect(() => {
+      // @ts-ignore
+      if (window.jitsiNodeAPI) {
+          // @ts-ignore
+          window.jitsiNodeAPI.ipc.on('auth-token-received', async (userJson: any) => {
+              console.log("🔐 Tokens received from Browser!", userJson);
+
+              try {
+                  const user = _User.fromStorageString(JSON.stringify(userJson));
+
+                  await getUserManager().storeUser(user);
+
+                  console.log("✅ User stored successfully. Reloading...");
+
+                  window.location.reload();
+              } catch (e) {
+                  console.error("❌ Failed to store user token:", e);
+              }
+          });
+
+          // @ts-ignore
+          window.jitsiNodeAPI.ipc.on('auth-logout-complete', async () => {
+              console.log("🔓 Logout signal received!");
+              
+              // 1. Clear LocalStorage
+              localStorage.clear();
+              sessionStorage.clear();
+              
+              // 2. Remove user from OIDC manager
+              await getUserManager().removeUser();
+              
+              // 3. Reload to show Login screen
+              window.location.reload();
+          });
+      }
+  }, []);
+
+  useEffect(() => {
     if (!isAuthReady) {
       return;
     }
-
+    
     if (dbUser && oidcUser) {
       const avatar =
         oidcUser.profile.picture || getGravatarUrl(dbUser.user.email);

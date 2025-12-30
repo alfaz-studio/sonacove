@@ -1,0 +1,15 @@
+<script>
+  import { getUserManager } from '../utils/AuthService';
+
+  (async function() {
+    try {
+      console.log("🚀 Starting Browser-based Login Flow...");
+      await getUserManager().signinRedirect({
+          state: "desktop_login" 
+      });
+    } catch (e) {
+      console.error("Failed to start login", e);
+      document.body.innerText = "Error starting login. Check console.";
+    }
+  })();
+</script>

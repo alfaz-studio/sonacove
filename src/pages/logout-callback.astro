@@ -4,10 +4,20 @@
   <head>
     <meta charset="UTF-8" />
     <title>Logging out...</title>
+    <style>
+        body { background-color: #1E1E1E; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+    </style>
   </head>
   <body>
     <script>
       import { getAuthService } from '../utils/AuthService';
+
+      function closeTab() {
+          window.close();
+          window.opener = null;
+          window.open("", "_self");
+          window.close();
+      }
 
       async function handleLogoutCallback() {
         try {
@@ -15,6 +25,22 @@
           await authService.handleLogoutCallback();
         } catch (error) {
           console.error('Logout callback warning:', error);
+        }
+
+        const isDesktopLogout = sessionStorage.getItem('is_desktop_logout') === 'true';
+        sessionStorage.removeItem('is_desktop_logout');
+
+        if (isDesktopLogout) {
+            // Redirect back to Electron to clear its state
+            window.location.href = 'sonacove://logout-callback';
+
+            setTimeout(() => {
+                closeTab();
+            }, 500);
+            
+            // Show feedback in browser
+            document.body.innerHTML = "<h1>Logged out successfully.<br>You can close this tab.</h1>";
+            return;
         }
 
         const returnUrl = sessionStorage.getItem('logout_return_url') || '/dashboard';

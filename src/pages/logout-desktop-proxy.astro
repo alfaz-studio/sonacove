@@ -1,0 +1,18 @@
+<script>
+  import { getUserManager } from '../utils/AuthService';
+
+  (async function() {
+    try {
+      console.log("🚀 Starting Browser-based Logout Flow...");
+      
+      // Store a flag in SessionStorage so we know to redirect back to app later
+      sessionStorage.setItem('is_desktop_logout', 'true');
+      
+      // Start OIDC logout
+      await getUserManager().signoutRedirect();
+    } catch (e) {
+      console.error("Failed to start logout", e);
+      document.body.innerText = "Error starting logout.";
+    }
+  })();
+</script>
