@@ -194,6 +194,12 @@ const StartMeetingCard: React.FC<StartMeetingCardProps> = ({ onMeetingBooked, bo
               <div className="flex w-full justify-center items-center gap-2 text-base tracking-wide text-amber-600 bg-amber-50 p-2 rounded-md">
                 <AlertCircle size={16} />
                 <span>Booking limit reached ({maxBookings}/{maxBookings}).</span>
+                <a 
+                  href="mailto:support@sonacove.com" 
+                  className="underline hover:text-amber-700 font-medium"
+                >
+                  Contact Us
+                </a>
               </div>
             ) : !isLoggedIn ? (
               // Case 2: Not Logged In

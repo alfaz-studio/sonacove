@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { ExternalLink, School, Smile, UsersRound } from 'lucide-react';
+import { ExternalLink, School, Smile, UsersRound, Loader2 } from 'lucide-react';
 
 interface SubscriptionSummary {
   individualSubscription: {
@@ -571,8 +571,9 @@ const PlanView: React.FC = () => {
             <Button
               className="w-full"
               onClick={() => handleCheckout('individual')}
-              disabled={isPriceLoading || !!paddleError}
+              disabled={isPriceLoading || !!paddleError || !paddleReady}
             >
+              {isPriceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {currentPlan === 'individual' ? 'Change individual plan' : 'Upgrade to Individual'}
             </Button>
           </CardFooter>
@@ -651,8 +652,9 @@ const PlanView: React.FC = () => {
             <Button
               className="w-full"
               onClick={() => handleCheckout('org')}
-              disabled={isPriceLoading || !!paddleError}
+              disabled={isPriceLoading || !!paddleError || !paddleReady}
             >
+              {isPriceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {currentPlan === 'org' ? 'Change seats / org plan' : 'Upgrade to Organization'}
             </Button>
           </CardFooter>

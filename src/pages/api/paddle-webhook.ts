@@ -7,10 +7,14 @@ import {
   paddleSubscriptionItems,
   paddleCustomers,
   paddleBusinesses,
-  organizations,
   users,
+  organizations,
 } from "../../lib/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID,
+  PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID,
+} from "astro:env/client";
 
 import type { APIRoute } from "astro";
 
@@ -143,6 +147,17 @@ async function processWebhookEvent(event: PaddleWebhookEvent, runtime: Runtime["
 }
 
 /**
+ * Check if a price_id corresponds to an org plan
+ */
+function isOrgPlanPrice(priceId: string): boolean {
+  const orgPriceIds = [
+    PUBLIC_PADDLE_ORG_MONTHLY_SEAT_PRICE_ID,
+    PUBLIC_PADDLE_ORG_ANNUAL_SEAT_PRICE_ID,
+  ].filter(Boolean);
+  return orgPriceIds.includes(priceId);
+}
+
+/**
  * Upsert subscription and paddle_subscription_items from Paddle webhook into local DB.
  * Uses Paddle as source-of-truth and links to users/orgs via paddle_customers.
  */
@@ -157,10 +172,18 @@ async function upsertSubscriptionFromWebhook(extractedData: PaddleWebhookData) {
     const totalQuantity =
       sub.items?.reduce((sum, item) => sum + (item.quantity ?? 0), 0) || 1;
 
+    // Determine if this is an org subscription by checking price IDs
+    let isOrgSubscription = false;
+    if (sub.items && sub.items.length > 0) {
+      // Check if any item has an org plan price_id
+      isOrgSubscription = sub.items.some((item) => 
+        item.price_id && isOrgPlanPrice(item.price_id)
+      );
+    }
+
     // Resolve local user/org via paddle_customers and organizations
     let userId: number | null = null;
     let orgId: number | null = null;
-    let isOrgSubscription = false;
 
     if (sub.customer_id) {
       const [pc] =
@@ -173,17 +196,18 @@ async function upsertSubscriptionFromWebhook(extractedData: PaddleWebhookData) {
       if (pc?.userId) {
         userId = pc.userId;
 
-        // If this user owns an org, treat this as an org subscription for now
-        const [org] =
-          (await db
-            .select()
-            .from(organizations)
-            .where(eq(organizations.ownerUserId, pc.userId))
-            .limit(1)) ?? [];
+        // If this user owns an org, link the subscription to it
+        if (isOrgSubscription) {
+          const [org] =
+            (await db
+              .select()
+              .from(organizations)
+              .where(eq(organizations.ownerUserId, pc.userId))
+              .limit(1)) ?? [];
 
-        if (org?.id) {
-          orgId = org.id;
-          isOrgSubscription = true;
+          if (org?.id) {
+            orgId = org.id;
+          }
         }
       }
     }
@@ -320,7 +344,8 @@ async function upsertCustomerFromWebhook(extractedData: PaddleWebhookData) {
 
 /**
  * Upsert business from Paddle webhook into local DB.
- * Uses Paddle as source-of-truth and links to organizations via paddle_customer.
+ * Uses Paddle as source-of-truth and links to customers (which link to users).
+ * Businesses are independent payment entities and don't require organizations.
  */
 async function upsertBusinessFromWebhook(extractedData: PaddleWebhookData) {
   const business = extractedData.business;
@@ -329,7 +354,7 @@ async function upsertBusinessFromWebhook(extractedData: PaddleWebhookData) {
   try {
     const db = createDb();
 
-    // Find the paddle_customer to get the user_id
+    // Verify the paddle_customer exists (businesses are linked to customers)
     const [paddleCustomer] = await db
       .select()
       .from(paddleCustomers)
@@ -339,20 +364,6 @@ async function upsertBusinessFromWebhook(extractedData: PaddleWebhookData) {
     if (!paddleCustomer) {
       logger.warn(
         `Skipping Paddle business ${business.id} - customer ${business.customer_id} not found in paddle_customers`
-      );
-      return;
-    }
-
-    // Find organization owned by this user
-    const [org] = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.ownerUserId, paddleCustomer.userId))
-      .limit(1);
-
-    if (!org) {
-      logger.warn(
-        `Skipping Paddle business ${business.id} - owner user ${paddleCustomer.userId} has no organization`
       );
       return;
     }
@@ -367,7 +378,6 @@ async function upsertBusinessFromWebhook(extractedData: PaddleWebhookData) {
     const businessData = {
       paddleBusinessId: business.id,
       paddleCustomerId: business.customer_id,
-      orgId: org.id,
       name: business.name,
       taxId: business.tax_identifier || null,
       country: business.address?.country_code || null,

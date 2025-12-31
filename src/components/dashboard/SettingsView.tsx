@@ -6,7 +6,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAuth } from '@/hooks/useAuth';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ExternalLink } from 'lucide-react';
 import LoginRequired from './LoginRequired';
 
 interface SettingsViewProps {
@@ -25,6 +25,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
     );
   }
 
+  // Construct Keycloak account management URL based on hostname
+  const authDomain =
+    window.location.hostname === 'sonacove.com'
+      ? 'auth.sonacove.com/auth'
+      : 'staj.sonacove.com/auth';
+  const manageAccountUrl = `https://${authDomain}/realms/jitsi/account`;
+
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Work In Progress Banner */}
@@ -38,11 +45,21 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 opacity-75">
-        <h2 className="text-xl font-semibold">Account Settings</h2>
-        <p className="text-base text-muted-foreground">
-          Manage your personal information and preferences.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Account Settings</h2>
+          <p className="text-base text-muted-foreground">
+            Manage your personal information and preferences.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => window.open(manageAccountUrl, '_blank', 'noopener,noreferrer')}
+        >
+          Manage Account
+          <ExternalLink className="ml-2 h-4 w-4" />
+        </Button>
       </div>
 
       {isLoggedIn && (

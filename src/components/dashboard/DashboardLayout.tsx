@@ -9,18 +9,11 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   CreditCard,
 } from 'lucide-react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query-client';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import Avatar from '../Avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -49,6 +42,17 @@ import { getGravatarUrl } from '../../utils/gravatar';
 import LoginRequired from './LoginRequired';
 import { getUserManager } from '@/utils/AuthService';
 import { User as _User } from 'oidc-client-ts';
+
+type OrgResponse = {
+  organization: {
+    id: number;
+    kcOrgId: string;
+    name: string;
+    alias: string;
+    role: Role;
+    members: any[];
+  } | null;
+};
 
 interface DashboardLayoutProps {}
 
@@ -138,16 +142,64 @@ const DashboardLayoutInner: React.FC = () => {
       const avatar =
         oidcUser.profile.picture || getGravatarUrl(dbUser.user.email);
 
-      const realUser: User = {
-        id: String(dbUser.user.id),
-        name: oidcUser.profile.name || dbUser.user.email.split('@')[0],
-        email: dbUser.user.email,
-        role: 'owner', // Hardcode owner for now
-        avatarUrl: avatar,
-        joinedAt: dbUser.user.createdAt,
+      // Fetch organization to get actual role
+      const fetchUserRole = async () => {
+        try {
+          const userManager = getUserManager();
+          const oidcUserObj = await userManager.getUser();
+          const token = oidcUserObj?.access_token;
+          if (!token) {
+            // No token, set default role (guest)
+            const realUser: User = {
+              id: String(dbUser.user.id),
+              name: oidcUser.profile.name || dbUser.user.email.split('@')[0],
+              email: dbUser.user.email,
+              role: 'owner', // Default role when not in org
+              avatarUrl: avatar,
+              joinedAt: dbUser.user.createdAt,
+            };
+            setActiveUser(realUser);
+            return;
+          }
+
+          const res = await fetch('/api/orgs/me', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          let userRole: Role = 'owner'; // Default role
+          if (res.ok) {
+            const data = (await res.json()) as OrgResponse;
+            if (data.organization) {
+              userRole = data.organization.role;
+            }
+          }
+
+          const realUser: User = {
+            id: String(dbUser.user.id),
+            name: oidcUser.profile.name || dbUser.user.email.split('@')[0],
+            email: dbUser.user.email,
+            role: userRole,
+            avatarUrl: avatar,
+            joinedAt: dbUser.user.createdAt,
+          };
+
+          setActiveUser(realUser);
+        } catch (err) {
+          console.error('Failed to fetch user role:', err);
+          // Fallback to default role on error
+          const realUser: User = {
+            id: String(dbUser.user.id),
+            name: oidcUser.profile.name || dbUser.user.email.split('@')[0],
+            email: dbUser.user.email,
+            role: 'owner',
+            avatarUrl: avatar,
+            joinedAt: dbUser.user.createdAt,
+          };
+          setActiveUser(realUser);
+        }
       };
 
-      setActiveUser(realUser);
+      fetchUserRole();
     } else {
       setActiveUser(null);
     }
@@ -158,11 +210,8 @@ const DashboardLayoutInner: React.FC = () => {
     const items = [
       { id: 'overview', label: 'Overview', icon: LayoutDashboard },
       { id: 'meetings', label: 'Meetings', icon: Video },
+      { id: 'users', label: 'Users', icon: Users },
     ];
-
-    if (role === 'owner' || role === 'admin') {
-      items.push({ id: 'users', label: 'Users', icon: Users });
-    }
 
     return items;
   };
@@ -275,46 +324,34 @@ const DashboardLayoutInner: React.FC = () => {
             ) : activeUser ? (
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuButton
-                        size="lg"
-                        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                      >
-                        <Avatar className="h-12 w-12 rounded-lg">
-                          <AvatarImage
-                            src={activeUser.avatarUrl}
-                            alt={activeUser.name}
-                          />
-                          <AvatarFallback className="rounded-lg text-lg">
-                            {activeUser.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="grid flex-1 text-left text-lg leading-tight">
-                          <span className="truncate font-semibold">
-                            {activeUser.name}
-                          </span>
+                  <div className="flex items-start gap-3 p-3 w-full">
+                    <Avatar
+                      src={activeUser.avatarUrl}
+                      alt={activeUser.name}
+                      className="h-12 w-12 rounded-lg flex-shrink-0"
+                      editable={true}
+                      email={activeUser.email}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="grid text-left text-lg leading-tight">
+                        <span className="truncate font-semibold">
+                          {activeUser.name}
+                        </span>
+                        <div className="flex items-center justify-between gap-2">
                           <span className="truncate text-base text-muted-foreground capitalize">
                             {activeUser.role}
                           </span>
+                          <button
+                            onClick={logout}
+                            className="text-sm text-red-600 hover:text-red-700 hover:underline transition-colors flex-shrink-0 group-data-[collapsible=icon]:hidden"
+                            title="Log out"
+                          >
+                            Log out
+                          </button>
                         </div>
-                      </SidebarMenuButton>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                      side="top"
-                      align="start"
-                      sideOffset={4}
-                    >
-                      <DropdownMenuItem
-                        className="text-red-600 cursor-pointer"
-                        onClick={logout}
-                      >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
                 </SidebarMenuItem>
               </SidebarMenu>
             ) : (
@@ -376,13 +413,22 @@ const DashboardLayoutInner: React.FC = () => {
                     activeUser.role === 'owner' ? (
                       <PlanView />
                     ) : (
-                      <div className="space-y-4 rounded-lg border bg-white p-6">
-                        <h2 className="text-xl font-semibold">Plan &amp; Billing</h2>
-                        <p className="text-base text-muted-foreground">
-                          Your access is managed by your organization owner. You have
-                          full access to Sonacove under your organization&apos;s plan.
-                          Billing settings are only available to organization owners.
-                        </p>
+                      <div className="relative">
+                        {/* Disabled content backdrop */}
+                        <div className="opacity-60 pointer-events-none">
+                          <PlanView />
+                        </div>
+                        {/* Centered notice overlay */}
+                        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                          <div className="space-y-4 rounded-lg border bg-white p-6 max-w-md mx-4 shadow-lg pointer-events-auto">
+                            <h2 className="text-xl font-semibold">Plan &amp; Billing</h2>
+                            <p className="text-base text-muted-foreground">
+                              Your access is managed by your organization owner. You have
+                              full access to Sonacove under your organization&apos;s plan.
+                              Billing settings are only available to organization owners.
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )
                   ) : (
