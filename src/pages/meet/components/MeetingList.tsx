@@ -36,6 +36,12 @@ const MeetingsPanel: React.FC<MeetingsPanelProps> = ({
     return meeting.status === meetingsFilter;
   });
 
+  const filterOptions = [
+    { label: 'All', value: 'All' },
+    { label: 'Upcoming', value: 'Upcoming' },
+    { label: 'Past', value: 'Past' },
+  ];
+
   // The main empty state when there are no meetings of any kind.
   if (meetings.length === 0) {
     return (
@@ -49,7 +55,7 @@ const MeetingsPanel: React.FC<MeetingsPanelProps> = ({
   return (
     <div className='text-center sm:text-left h-[400px] flex flex-col'>
       <ToggleSwitch
-        options={['All', 'Upcoming', 'Past']}
+        options={filterOptions}
         activeOption={meetingsFilter}
         onOptionChange={(option) => setMeetingsFilter(option)}
         className='rounded-full mb-8 flex-shrink-0 w-fit'
