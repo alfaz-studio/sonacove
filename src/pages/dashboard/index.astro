@@ -5,6 +5,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Sonacove Dashboard" description="Manage your meetings, users, and organization settings.">
-  <DashboardLayout client:load />
+  <DashboardLayout client:only="react" />
 </BaseLayout>
 
