@@ -13,7 +13,14 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Label } from '../ui/label';
-import { Plus, Search, X, Settings2 } from 'lucide-react';
+import { Plus, Search, X, Settings2, Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +35,7 @@ import { UserDataTable } from './users/user-datatable';
 import { createColumns } from './users/columns';
 import { showPopup } from '../../utils/popupService';
 import type { VisibilityState } from '@tanstack/react-table';
+import { getGravatarUrl } from '../../utils/gravatar';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -84,8 +92,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserFirstName, setNewUserFirstName] = useState('');
-  const [newUserLastName, setNewUserLastName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<Role>('teacher');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -94,7 +101,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
   const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
   const [seatsTotal, setSeatsTotal] = useState<number | null>(null);
   const [seatsAvailable, setSeatsAvailable] = useState<number | null>(null);
-  const [hasOrgSubscription, setHasOrgSubscription] = useState<boolean | null>(null);
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
 
   const fetchOrg = async () => {
     const token = getAccessToken?.();
@@ -126,6 +133,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
           role: m.role,
           status: m.status ?? 'active',
           joinedAt: m.joinedAt?.split('T')[0] ?? '',
+          avatarUrl: getGravatarUrl(m.email),
         }));
         setOrgMembers(members);
 
@@ -153,35 +161,45 @@ const UsersView: React.FC<UsersViewProps> = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch subscription summary once to know if the user has an org-tier subscription
-  useEffect(() => {
-    const fetchSummary = async () => {
-      const token = getAccessToken?.();
-      if (!token) return;
-      try {
-        const res = await fetch('/api/subscriptions/summary', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          return;
-        }
-        const data = (await res.json()) as {
-          orgSubscription: { status: string } | null;
-        };
-        setHasOrgSubscription(
-          !!data.orgSubscription && data.orgSubscription.status === 'active',
-        );
-      } catch (e) {
-        console.error('Failed to load subscription summary for org creation', e);
-      }
-    };
-    fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const handleRoleChange = async (userId: string, newRole: Role) => {
+    const user = orgMembers.find((u) => u.id === userId);
+    if (!user) {
+      showPopup('User not found', 'error');
+      return;
+    }
 
-  const handleRoleChange = (_userId: string, _newRole: Role) => {
-    // Role edits are not supported yet; keep placeholder for future roles.
-    showPopup('Role updates are not available yet', 'info');
+    const token = getAccessToken?.();
+    if (!token) {
+      showPopup('You must be logged in', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/orgs/members', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: user.email,
+          role: newRole,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({ error: 'Failed to update role' }))) as { error?: string };
+        const errorMsg = data.error || 'Failed to update role';
+        throw new Error(errorMsg);
+      }
+
+      showPopup(`Role updated to ${newRole}`, 'success');
+      await fetchOrg();
+    } catch (e) {
+      console.error(e);
+      const errorMsg = e instanceof Error ? e.message : 'Failed to update role';
+      showPopup(errorMsg, 'error');
+    }
   };
 
   const handleDeleteClick = (userId: string) => {
@@ -244,8 +262,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
         },
         body: JSON.stringify({
           email: newUserEmail,
-          firstName: newUserFirstName || undefined,
-          lastName: newUserLastName || undefined,
+          role: newUserRole,
         }),
       });
       if (!res.ok) {
@@ -264,8 +281,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
     
     // Reset form
     setNewUserEmail('');
-    setNewUserFirstName('');
-    setNewUserLastName('');
+    setNewUserRole('teacher');
     setEmailError(null);
     setIsAddUserOpen(false);
   };
@@ -299,7 +315,9 @@ const UsersView: React.FC<UsersViewProps> = () => {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="text-base text-muted-foreground">Loading organization...</div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-2xl text-muted-foreground">Loading organization...</div>
+        </div>
       )}
       {loadError && (
         <div className="text-base text-red-600">{loadError}</div>
@@ -311,12 +329,6 @@ const UsersView: React.FC<UsersViewProps> = () => {
           <p className="text-muted-foreground text-base">
             Create an organization to start adding members.
           </p>
-          {hasOrgSubscription === false && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              Creating an organization requires an active Organization plan. Upgrade
-              from the Plan &amp; Billing tab first, then return here to create your org.
-            </p>
-          )}
           <div className="flex flex-col gap-4 max-w-md">
             <div className="grid gap-2">
               <Label htmlFor="orgName">Organization name *</Label>
@@ -343,13 +355,6 @@ const UsersView: React.FC<UsersViewProps> = () => {
               onClick={async () => {
                 const token = getAccessToken?.();
                 if (!token) return;
-                if (hasOrgSubscription === false) {
-                  showPopup(
-                    'Creating an organization requires the Organization plan. Please upgrade in the Plan & Billing tab first.',
-                    'info',
-                  );
-                  return;
-                }
                 if (!orgName.trim()) {
                   showPopup('Please enter an organization name', 'error');
                   return;
@@ -364,6 +369,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
                   showPopup('Please enter a valid domain name (e.g., example.com)', 'error');
                   return;
                 }
+                setIsCreatingOrg(true);
                 try {
                   const res = await fetch('/api/orgs', {
                     method: 'POST',
@@ -389,10 +395,14 @@ const UsersView: React.FC<UsersViewProps> = () => {
                   console.error(e);
                   const errorMsg = e instanceof Error ? e.message : 'Failed to create organization';
                   showPopup(errorMsg, 'error');
+                } finally {
+                  setIsCreatingOrg(false);
                 }
               }}
               className="bg-primary-500 text-white hover:bg-primary-600 w-fit"
+              disabled={isCreatingOrg}
             >
+              {isCreatingOrg && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Organization
             </Button>
           </div>
@@ -411,7 +421,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
           <Button
             className="gap-2 bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
             onClick={() => setIsAddUserOpen(true)}
-            disabled={seatsAvailable !== null && seatsAvailable <= 0}
+            disabled={!seatsTotal || seatsAvailable === null || seatsAvailable <= 0}
           >
             <Plus className="h-4 w-4" /> Invite User
           </Button>
@@ -531,30 +541,30 @@ const UsersView: React.FC<UsersViewProps> = () => {
               )}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="firstName">First name (optional)</Label>
-              <Input
-                id="firstName"
-                placeholder="John"
-                value={newUserFirstName}
-                onChange={(e) => setNewUserFirstName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="lastName">Last name (optional)</Label>
-              <Input
-                id="lastName"
-                placeholder="Doe"
-                value={newUserLastName}
-                onChange={(e) => setNewUserLastName(e.target.value)}
-              />
+              <Label htmlFor="role">Role *</Label>
+              <Select
+                value={newUserRole}
+                onValueChange={(value) => setNewUserRole(value as Role)}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Select the role for this organization member.
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button className="bg-gray-100 text-black border border-gray-200 hover:bg-gray-200" variant="outline" onClick={() => {
               setIsAddUserOpen(false);
               setNewUserEmail('');
-              setNewUserFirstName('');
-              setNewUserLastName('');
+              setNewUserRole('teacher');
               setEmailError(null);
             }}>
               Cancel

@@ -1,10 +1,11 @@
 import type { APIRoute } from "astro";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { createDb } from "../../../lib/db/drizzle";
 import {
   organizationMembers,
   organizations,
   paddleCustomers,
+  paddleSubscriptions,
   users,
 } from "../../../lib/db/schema";
 import { validateAuth } from "../../../lib/modules/auth-helper";
@@ -147,30 +148,6 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
         alias: organizations.alias,
       });
 
-    // Create a Paddle business for this org if we have a Paddle customer
-    if (ownerPaddleCustomerId) {
-      try {
-        const business = await PaddleClient.createBusinessForCustomer(
-          ownerPaddleCustomerId,
-          {
-            name,
-            // Basic payload - can be extended to include tax/address data later
-            address: {
-              country_code: "US",
-            },
-          },
-        );
-
-        if (business?.id) {
-          // Note: We no longer write to paddle_businesses directly here.
-          // Paddle will send a webhook event (business.updated or business.created)
-          // which will update the paddle_businesses table via the Paddle webhook handler.
-        }
-      } catch (e) {
-        logger.error(e, "Failed to create Paddle business for organization:");
-      }
-    }
-
     await db.insert(organizationMembers).values({
       orgId: orgRow.id,
       userId,
@@ -181,6 +158,30 @@ const createOrgHandler: APIRoute = async ({ request, locals }) => {
 
     // Add member in Keycloak (owner)
     await keycloakClient.addMemberToOrganization(orgResult.id, kcUser.id);
+
+    // Link any existing org subscription to the newly created org
+    const [unlinkedOrgSub] =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(
+          and(
+            eq(paddleSubscriptions.userId, userId),
+            eq(paddleSubscriptions.isOrgSubscription, true),
+            isNull(paddleSubscriptions.orgId),
+          ),
+        )
+        .limit(1)) ?? [];
+
+    if (unlinkedOrgSub) {
+      await db
+        .update(paddleSubscriptions)
+        .set({ orgId: orgRow.id })
+        .where(eq(paddleSubscriptions.id, unlinkedOrgSub.id));
+      logger.info(
+        `Linked org subscription ${unlinkedOrgSub.paddleSubscriptionId} to org ${orgRow.id}`,
+      );
+    }
 
     return new Response(
       JSON.stringify({

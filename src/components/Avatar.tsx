@@ -67,6 +67,9 @@ interface AvatarProps {
 
   /** If true, shows an edit icon on hover that links to Gravatar. Defaults to false. */
   editable?: boolean;
+
+  /** The user's email address, used to pre-fill the Gravatar edit page. */
+  email?: string;
 }
 
 /**
@@ -79,6 +82,7 @@ const Avatar: React.FC<AvatarProps> = ({
   alt,
   className = '',
   editable = false, // Destructure the new prop, default to false
+  email,
 }) => {
   const [imgSrc, setImgSrc] = useState(src);
 
@@ -96,13 +100,13 @@ const Avatar: React.FC<AvatarProps> = ({
     }
   };
 
-  const gravatarEditUrl = 'https://gravatar.com/profile/edit';
+  const gravatarEditUrl = `https://gravatar.com/profile/edit${email ? `?email=${encodeURIComponent(email)}` : ''}`;
 
   return (
     <div
       className={twMerge(
         'relative flex-shrink-0',
-        editable ? 'group' : '',
+        editable ? 'group/avatar' : '',
         className,
       )}
     >
@@ -120,7 +124,8 @@ const Avatar: React.FC<AvatarProps> = ({
           target='_blank'
           rel='noopener noreferrer'
           aria-label='Edit Gravatar profile'
-          className='absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+          onClick={(e) => e.stopPropagation()}
+          className='absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200'
         >
           <Pencil className='w-1/3 h-1/3 text-white' />
         </a>

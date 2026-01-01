@@ -8,13 +8,20 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Mail } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 interface ColumnsProps {
   onRoleChange: (userId: string, newRole: User["role"]) => void
   onDelete: (userId: string) => void
   canManage?: boolean
 }
 
-export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): ColumnDef<User>[] => [
+export const createColumns = ({ onRoleChange, onDelete, canManage = false }: ColumnsProps): ColumnDef<User>[] => [
   // Selection checkbox column
   {
     id: "select",
@@ -76,7 +83,7 @@ export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): Co
     },
   },
   
-  // Role column (read-only for now)
+  // Role column (editable when canManage is true)
   {
     accessorKey: "role",
     header: ({ column }) => {
@@ -92,8 +99,35 @@ export const createColumns = ({ onDelete, canManage = false }: ColumnsProps): Co
       )
     },
     cell: ({ row }) => {
+      const user = row.original
       const role = row.getValue("role") as User["role"]
-      return <div className="capitalize">{role}</div>
+      
+      if (!canManage) {
+        return <div className="capitalize">{role}</div>
+      }
+
+      // Don't allow editing owner role
+      if (role === "owner") {
+        return <div className="capitalize">{role}</div>
+      }
+
+      return (
+        <Select
+          value={role}
+          onValueChange={(value) => {
+            onRoleChange(user.id, value as User["role"])
+          }}
+        >
+          <SelectTrigger className="w-[140px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="teacher">Teacher</SelectItem>
+            <SelectItem value="student">Student</SelectItem>
+          </SelectContent>
+        </Select>
+      )
     },
   },
   

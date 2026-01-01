@@ -154,7 +154,7 @@ export const paddleSubscriptionItems = sonacoveSchema.table(
   }
 );
 
-// Paddle businesses table - mirrors Paddle businesses and links to organizations
+// Paddle businesses table - mirrors Paddle businesses, linked to customers (which link to users)
 export const paddleBusinesses = sonacoveSchema.table(
   "paddle_businesses",
   {
@@ -163,10 +163,6 @@ export const paddleBusinesses = sonacoveSchema.table(
       length: 255,
     }).notNull().unique(),
     paddleCustomerId: varchar("paddle_customer_id", { length: 255 }).notNull(),
-    orgId: integer("org_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" })
-      .unique(),
     name: varchar("name", { length: 255 }).notNull(),
     taxId: varchar("tax_id", { length: 255 }),
     country: varchar("country", { length: 2 }),
@@ -248,12 +244,15 @@ export const meetingEvents = sonacoveSchema.table("meeting_events", {
 });
 
 // Define relations (after all tables)
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   bookedRooms: many(bookedRooms),
   organizations: many(organizations, { relationName: "orgOwner" }),
   memberships: many(organizationMembers, { relationName: "userMembership" }),
   subscriptions: many(paddleSubscriptions),
-  paddleCustomer: many(paddleCustomers),
+  paddleCustomer: one(paddleCustomers, {
+    fields: [users.id],
+    references: [paddleCustomers.userId],
+  }),
 }));
 
 export const bookedRoomsRelations = relations(bookedRooms, ({ one }) => ({
@@ -273,7 +272,6 @@ export const organizationsRelations = relations(
     }),
     members: many(organizationMembers),
     subscriptions: many(paddleSubscriptions),
-    paddleBusiness: many(paddleBusinesses),
   }),
 );
 
@@ -328,10 +326,6 @@ export const paddleSubscriptionItemsRelations = relations(
 export const paddleBusinessesRelations = relations(
   paddleBusinesses,
   ({ one }) => ({
-    organization: one(organizations, {
-      fields: [paddleBusinesses.orgId],
-      references: [organizations.id],
-    }),
     paddleCustomer: one(paddleCustomers, {
       fields: [paddleBusinesses.paddleCustomerId],
       references: [paddleCustomers.paddleCustomerId],

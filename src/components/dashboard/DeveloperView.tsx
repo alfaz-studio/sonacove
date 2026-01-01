@@ -141,19 +141,10 @@ const DeveloperView: React.FC = () => {
 </script>`;
 
   return (
-    <div className="space-y-8">
-      {/* Work In Progress Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-base font-semibold text-amber-900">Developer Tools - Coming Soon</h3>
-          <p className="text-base text-amber-700 mt-1">
-            We are putting the finishing touches on our API and Webhook integrations. These features are currently disabled for preview purposes.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 opacity-60">
+    <div className="relative space-y-8">
+      {/* Disabled content backdrop */}
+      <div className="opacity-60 pointer-events-none">
+      <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Developer Console</h2>
         <p className="text-sm text-muted-foreground">
           Manage API keys and Webhooks to integrate Sonacove into your applications.
@@ -161,7 +152,7 @@ const DeveloperView: React.FC = () => {
       </div>
 
       {/* Embed Section */}
-      <div className="space-y-4 opacity-60">
+      <div className="space-y-4">
         <div className="flex flex-col gap-2">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Code className="h-5 w-5" /> Embed in your application
@@ -205,7 +196,7 @@ const DeveloperView: React.FC = () => {
       <Separator className="my-8" />
 
       {/* API Keys Section */}
-      <div className="space-y-4 opacity-60">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -277,7 +268,7 @@ const DeveloperView: React.FC = () => {
       <Separator className="my-8" />
 
       {/* Webhooks Section */}
-      <div className="space-y-4 opacity-60">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -351,6 +342,22 @@ const DeveloperView: React.FC = () => {
             )}
           </CardContent>
         </Card>
+      </div>
+      </div>
+
+      {/* Centered notice overlay */}
+      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 max-w-md mx-4 shadow-lg pointer-events-auto">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-base font-semibold text-amber-900">Developer Tools - Coming Soon</h3>
+              <p className="text-base text-amber-700 mt-1">
+                We are putting the finishing touches on our API and Webhook integrations. These features are currently disabled for preview purposes.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Add Webhook Dialog (Triggers disabled, so these won't be reachable) */}

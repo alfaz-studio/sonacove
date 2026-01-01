@@ -76,21 +76,36 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
 
     const org = orgMembership[0];
 
+    // Find user's org subscription (by userId and isOrgSubscription flag)
+    // This works even if user doesn't have an org yet
+    const [userOrgSub] =
+      (await db
+        .select()
+        .from(paddleSubscriptions)
+        .where(
+          and(
+            eq(paddleSubscriptions.userId, dbUser.id),
+            eq(paddleSubscriptions.isOrgSubscription, true),
+          ),
+        )
+        .limit(1)) ?? [];
+
     let orgSubscription = null;
-    let seatsUsed: number | null = null;
+    let seatsUsed: number = 0;
     let seatsTotal: number | null = null;
     let seatsAvailable: number | null = null;
 
+    // If user is in an org, check for subscription linked to that org (preferred)
     if (org) {
-      const [sub] =
+      const [orgLinkedSub] =
         (await db
           .select()
           .from(paddleSubscriptions)
           .where(eq(paddleSubscriptions.orgId, org.orgId))
           .limit(1)) ?? [];
-      orgSubscription = sub ?? null;
 
-      if (sub) {
+      if (orgLinkedSub) {
+        orgSubscription = orgLinkedSub;
         const members = await db
           .select({ status: organizationMembers.status })
           .from(organizationMembers)
@@ -99,9 +114,18 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
         seatsUsed = members.filter(
           (m) => m.status === "active" || m.status === "pending",
         ).length;
-        seatsTotal = sub.quantity ?? 1;
+        seatsTotal = orgLinkedSub.quantity ?? 1;
         seatsAvailable = Math.max(0, seatsTotal - seatsUsed);
       }
+    }
+
+    // If no org-linked subscription found, use user-linked org subscription
+    if (!orgSubscription && userOrgSub) {
+      orgSubscription = userOrgSub;
+      seatsTotal = userOrgSub.quantity ?? 1;
+      // If user doesn't have an org yet, seatsUsed is 0
+      seatsUsed = org ? seatsUsed : 0;
+      seatsAvailable = Math.max(0, seatsTotal - seatsUsed);
     }
 
     // Individual subscription (not linked to org)

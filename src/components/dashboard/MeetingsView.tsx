@@ -218,10 +218,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
 
   const clearAllFilters = () => {
     setGlobalFilter('');
-    setDateRange({
-      from: startOfDay(subDays(new Date(), 6)),
-      to: endOfDay(new Date()),
-    });
+    setDateRange(undefined);
     setIsHostFilter(false);
     setParticipantSizeFilter('');
     setOngoingFilter(false);
@@ -342,7 +339,7 @@ const MeetingsView: React.FC<MeetingsViewProps> = ({ user }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading meetings...</div>
+        <div className="text-2xl text-muted-foreground">Loading meetings...</div>
       </div>
     );
   }

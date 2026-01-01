@@ -26,17 +26,29 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
     const body = (await request.json().catch(() => null)) as
       | {
           email?: string;
-          firstName?: string;
-          lastName?: string;
+          role?: string;
         }
       | null;
     const inviteEmail = body?.email;
-    const firstName = body?.firstName;
-    const lastName = body?.lastName;
+    const inviteRole = body?.role;
 
     if (!inviteEmail || !inviteEmail.includes("@")) {
       return jsonError("Missing or invalid email address", 400);
     }
+
+    // Validate role
+    const validRoles = ["owner", "admin", "teacher", "student"];
+    if (inviteRole && !validRoles.includes(inviteRole)) {
+      return jsonError(`Invalid role. Must be one of: ${validRoles.join(", ")}`, 400);
+    }
+
+    // Prevent inviting with owner role (only org creator is owner)
+    if (inviteRole === "owner") {
+      return jsonError("Cannot invite members with owner role", 400);
+    }
+
+    // Default to teacher if not provided
+    const role = inviteRole || "teacher";
 
     const db = createDb();
 
@@ -71,7 +83,7 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
       return jsonError("Only owners can invite members", 403);
     }
 
-    // Enforce seat limits if an org subscription exists
+    // Require org subscription to exist
     const [orgSubscription] =
       (await db
         .select()
@@ -79,25 +91,32 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
         .where(eq(paddleSubscriptions.orgId, membership.orgId))
         .limit(1)) ?? [];
 
-    if (orgSubscription) {
-      const currentMembers = await db
-        .select({
-          status: organizationMembers.status,
-        })
-        .from(organizationMembers)
-        .where(eq(organizationMembers.orgId, membership.orgId));
+    if (!orgSubscription) {
+      return jsonError(
+        "Your organization must have an active organization plan to invite members.",
+        403,
+      );
+    }
 
-      const seatsUsed = currentMembers.filter(
-        (m) => m.status === "active" || m.status === "pending",
-      ).length;
-      const seatsTotal = orgSubscription.quantity ?? 1;
+    // Enforce seat limits - require available seats
+    const currentMembers = await db
+      .select({
+        status: organizationMembers.status,
+      })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.orgId, membership.orgId));
 
-      if (seatsUsed >= seatsTotal) {
-        return jsonError(
-          "Your organization has reached its seat limit. Please upgrade your plan to invite more members.",
-          403,
-        );
-      }
+    const seatsUsed = currentMembers.filter(
+      (m) => m.status === "active" || m.status === "pending",
+    ).length;
+    const seatsTotal = orgSubscription.quantity ?? 1;
+    const seatsAvailable = seatsTotal - seatsUsed;
+
+    if (seatsAvailable <= 0) {
+      return jsonError(
+        "Your organization has reached its seat limit. Please upgrade your plan to invite more members.",
+        403,
+      );
     }
 
     // Check if target user already belongs to any org (DB check)
@@ -146,13 +165,11 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
       targetDbId = newUser.id;
     }
 
-    // Invite via Keycloak
+    // Invite via Keycloak (firstName/lastName are optional)
     const inviteSuccess = await keycloakClient.inviteUserToOrganization(
       membership.kcOrgId,
       {
         email: inviteEmail,
-        firstName,
-        lastName,
       },
     );
 
@@ -164,7 +181,7 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
     await db.insert(organizationMembers).values({
       orgId: membership.orgId,
       userId: targetDbId,
-      role: "teacher",
+      role: role as "admin" | "teacher" | "student",
       status: "pending",
       invitedEmail: inviteEmail,
       invitedAt: new Date(),
