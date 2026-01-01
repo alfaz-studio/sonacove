@@ -77,8 +77,10 @@ const meHandler: APIRoute = async ({ request, locals }) => {
       .where(eq(organizationMembers.orgId, org.orgId));
 
     // Compute seat usage based on active + pending members
+    // Only count admin and teacher roles toward seats (exclude owner and student)
     const seatsUsed = dbMembers.filter(
-      (m) => m.status === "active" || m.status === "pending",
+      (m) => (m.status === "active" || m.status === "pending") &&
+             (m.role === "admin" || m.role === "teacher"),
     ).length;
 
     // Find org subscription (if any)

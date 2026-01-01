@@ -648,6 +648,52 @@ async function createBusinessForCustomer(
   }
 }
 
+/**
+ * Updates a Paddle subscription
+ * @param subscriptionId The Paddle subscription ID (e.g., sub_...)
+ * @param items Array of items with priceId and quantity
+ * @param prorationBillingMode How to handle proration for the changes
+ * @returns The updated subscription data or null if update failed
+ */
+async function updateSubscription(
+  subscriptionId: string,
+  items: Array<{ priceId: string; quantity: number }>,
+  prorationBillingMode: 'prorated_immediately' | 'prorated_next_billing_period' | 'full_immediately' | 'full_next_billing_period' | 'do_not_bill'
+): Promise<any> {
+  try {
+    const baseUrl = getPaddleBaseUrl();
+    const endpoint = `${baseUrl}/subscriptions/${subscriptionId}`;
+
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${PADDLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        items: items.map(item => ({
+          price_id: item.priceId,
+          quantity: item.quantity,
+        })),
+        proration_billing_mode: prorationBillingMode,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to update subscription: ${response.status} ${errorText}`
+      );
+    }
+
+    const subscriptionResponse = await response.json() as { data: any };
+    return subscriptionResponse.data;
+  } catch (error) {
+    logger.error(`Error updating Paddle subscription ${subscriptionId}: ${error}`);
+    throw error;
+  }
+}
+
 export const PaddleClient = {
   fetchCustomer,
   validateWebhook,
@@ -658,4 +704,5 @@ export const PaddleClient = {
   createCustomerPortalSession,
   deleteCustomer, // Archives customer (soft delete)
   createBusinessForCustomer,
+  updateSubscription,
 };

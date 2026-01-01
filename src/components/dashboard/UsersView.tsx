@@ -45,6 +45,12 @@ import {
 import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
 import { useAuth } from '@/hooks/useAuth';
 import LoginRequired from './LoginRequired';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 type OrgMemberResponse = {
   id: number;
@@ -102,6 +108,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
   const [seatsTotal, setSeatsTotal] = useState<number | null>(null);
   const [seatsAvailable, setSeatsAvailable] = useState<number | null>(null);
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [isInvitingUser, setIsInvitingUser] = useState(false);
 
   const fetchOrg = async () => {
     const token = getAccessToken?.();
@@ -253,6 +260,7 @@ const UsersView: React.FC<UsersViewProps> = () => {
       return;
     }
 
+    setIsInvitingUser(true);
     try {
       const res = await fetch('/api/orgs/invite', {
         method: 'POST',
@@ -272,18 +280,19 @@ const UsersView: React.FC<UsersViewProps> = () => {
       }
       showPopup(`Invitation sent to ${newUserEmail}`, 'success');
       await fetchOrg();
+      // Reset form
+      setNewUserEmail('');
+      setNewUserRole('teacher');
+      setEmailError(null);
+      setIsAddUserOpen(false);
     } catch (e) {
       console.error(e);
       const errorMsg = e instanceof Error ? e.message : 'Failed to invite user';
       showPopup(errorMsg, 'error');
       setEmailError(errorMsg);
+    } finally {
+      setIsInvitingUser(false);
     }
-    
-    // Reset form
-    setNewUserEmail('');
-    setNewUserRole('teacher');
-    setEmailError(null);
-    setIsAddUserOpen(false);
   };
 
   const columns = createColumns({
@@ -418,13 +427,24 @@ const UsersView: React.FC<UsersViewProps> = () => {
           </p>
         </div>
         {orgMeta.role === 'owner' && (
-          <Button
-            className="gap-2 bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
-            onClick={() => setIsAddUserOpen(true)}
-            disabled={!seatsTotal || seatsAvailable === null || seatsAvailable <= 0}
-          >
-            <Plus className="h-4 w-4" /> Invite User
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="gap-2 bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
+                  onClick={() => setIsAddUserOpen(true)}
+                  disabled={!seatsTotal || seatsAvailable === null || seatsAvailable <= 0}
+                >
+                  <Plus className="h-4 w-4" /> Invite User
+                </Button>
+              </TooltipTrigger>
+              {(!seatsTotal || seatsAvailable === null || seatsAvailable <= 0) && (
+                <TooltipContent>
+                  <p>Upgrade to Organization plan to invite members</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
       )}
@@ -569,7 +589,14 @@ const UsersView: React.FC<UsersViewProps> = () => {
             }}>
               Cancel
             </Button>
-            <Button className="bg-primary-500 text-white hover:bg-primary-600" onClick={handleAddUser}>Send Invitation</Button>
+            <Button 
+              className="bg-primary-500 text-white hover:bg-primary-600" 
+              onClick={handleAddUser}
+              disabled={isInvitingUser}
+            >
+              {isInvitingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send Invitation
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

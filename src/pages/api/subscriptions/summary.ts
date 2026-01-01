@@ -107,12 +107,17 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       if (orgLinkedSub) {
         orgSubscription = orgLinkedSub;
         const members = await db
-          .select({ status: organizationMembers.status })
+          .select({ 
+            status: organizationMembers.status,
+            role: organizationMembers.role,
+          })
           .from(organizationMembers)
           .where(eq(organizationMembers.orgId, org.orgId));
 
+        // Only count admin and teacher roles toward seats (exclude owner and student)
         seatsUsed = members.filter(
-          (m) => m.status === "active" || m.status === "pending",
+          (m) => (m.status === "active" || m.status === "pending") &&
+                 (m.role === "admin" || m.role === "teacher"),
         ).length;
         seatsTotal = orgLinkedSub.quantity ?? 1;
         seatsAvailable = Math.max(0, seatsTotal - seatsUsed);
@@ -150,15 +155,19 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
               billingInterval: individualSub.billingInterval,
               billingFrequency: individualSub.billingFrequency,
               nextBilledAt: individualSub.nextBilledAt,
+              subscriptionId: individualSub.paddleSubscriptionId,
             }
           : null,
         orgSubscription: orgSubscription
           ? {
               status: orgSubscription.status,
               quantity: orgSubscription.quantity,
+              billingInterval: orgSubscription.billingInterval,
+              billingFrequency: orgSubscription.billingFrequency,
               seatsUsed,
               seatsTotal,
               seatsAvailable,
+              subscriptionId: orgSubscription.paddleSubscriptionId,
             }
           : null,
       }),

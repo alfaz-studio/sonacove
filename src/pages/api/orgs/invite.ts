@@ -102,12 +102,15 @@ const inviteHandler: APIRoute = async ({ request, locals }) => {
     const currentMembers = await db
       .select({
         status: organizationMembers.status,
+        role: organizationMembers.role,
       })
       .from(organizationMembers)
       .where(eq(organizationMembers.orgId, membership.orgId));
 
+    // Only count admin and teacher roles toward seats (exclude owner and student)
     const seatsUsed = currentMembers.filter(
-      (m) => m.status === "active" || m.status === "pending",
+      (m) => (m.status === "active" || m.status === "pending") &&
+             (m.role === "admin" || m.role === "teacher"),
     ).length;
     const seatsTotal = orgSubscription.quantity ?? 1;
     const seatsAvailable = seatsTotal - seatsUsed;
