@@ -33,13 +33,17 @@ interface SubscriptionSummary {
     billingInterval: string | null;
     billingFrequency: number | null;
     nextBilledAt: string | null;
+    subscriptionId: string;
   } | null;
   orgSubscription: {
     status: string;
     quantity: number;
+    billingInterval: string | null;
+    billingFrequency: number | null;
     seatsUsed: number | null;
     seatsTotal: number | null;
     seatsAvailable: number | null;
+    subscriptionId: string;
   } | null;
 }
 
@@ -58,6 +62,7 @@ const PlanView: React.FC = () => {
   const [paddleError, setPaddleError] = useState<string | null>(null);
   const [pricePreview, setPricePreview] = useState<PricePreviewResponse | null>(null);
   const [isPriceLoading, setIsPriceLoading] = useState(false);
+  const [seatUpdateLoading, setSeatUpdateLoading] = useState(false);
   const paddleRef = useRef<Paddle | undefined>(undefined);
   const [paddleReady, setPaddleReady] = useState(false);
 
@@ -95,6 +100,29 @@ const PlanView: React.FC = () => {
       return 'individual';
     }
     return 'free';
+  }, [summary]);
+
+  // Sync billing interval from active subscription
+  useEffect(() => {
+    if (!summary) return;
+    
+    // Check org subscription first (takes precedence)
+    if (summary.orgSubscription && summary.orgSubscription.status === 'active' && summary.orgSubscription.billingInterval) {
+      const interval = summary.orgSubscription.billingInterval.toLowerCase();
+      if (interval === 'month' || interval === 'year') {
+        setBillingInterval(interval as BillingInterval);
+        return;
+      }
+    }
+    
+    // Check individual subscription
+    if (summary.individualSubscription && summary.individualSubscription.status === 'active' && summary.individualSubscription.billingInterval) {
+      const interval = summary.individualSubscription.billingInterval.toLowerCase();
+      if (interval === 'month' || interval === 'year') {
+        setBillingInterval(interval as BillingInterval);
+        return;
+      }
+    }
   }, [summary]);
 
   // Initialize Paddle once
@@ -207,11 +235,87 @@ const PlanView: React.FC = () => {
   }, [billingInterval, currency, paddleReady]);
 
   const handleCheckout = async (plan: DashboardPlanKey) => {
+    // If switching to free plan and user has an active subscription, open portal
     if (plan === 'free') {
+      if (currentPlan !== 'free') {
+        await openPortal();
+        return;
+      }
       showPopup('You are on the Free plan. Paid upgrades are available below.', 'info');
       return;
     }
 
+    // For org plan with existing active subscription, update seats via API instead of checkout
+    if (plan === 'org' && summary?.orgSubscription && summary.orgSubscription.status === 'active') {
+      const token = getAccessToken?.();
+      if (!token) {
+        showPopup('You must be logged in to update your subscription', 'error');
+        return;
+      }
+
+      const newQuantity = Math.max(1, seatQuantity);
+      const currentQuantity = summary.orgSubscription.quantity;
+
+      // Don't update if quantity hasn't changed
+      if (newQuantity === currentQuantity) {
+        showPopup('Seat quantity is already set to this value.', 'info');
+        return;
+      }
+
+      setSeatUpdateLoading(true);
+      try {
+        const res = await fetch('/api/subscriptions/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            subscriptionId: summary.orgSubscription.subscriptionId,
+            quantity: newQuantity,
+            // Automatically choose proration mode: immediate for increases, next period for decreases
+            prorationBillingMode: newQuantity > currentQuantity 
+              ? 'prorated_immediately' 
+              : 'prorated_next_billing_period',
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = (await res.json().catch(() => ({ error: 'Unknown error' }))) as {
+            error?: string;
+          };
+          throw new Error(errorData.error || `Failed to update subscription: ${res.status}`);
+        }
+
+        // Refresh subscription summary
+        const summaryRes = await fetch('/api/subscriptions/summary', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (summaryRes.ok) {
+          const data = (await summaryRes.json()) as SubscriptionSummary;
+          setSummary(data);
+        }
+
+        const change = newQuantity > currentQuantity ? 'increased' : 'decreased';
+        showPopup(
+          `Seats ${change} from ${currentQuantity} to ${newQuantity}. Your subscription has been updated.`,
+          'success',
+        );
+      } catch (err) {
+        console.error('Error updating subscription:', err);
+        showPopup(
+          err instanceof Error
+            ? err.message
+            : 'Failed to update subscription. Please try again.',
+          'error',
+        );
+      } finally {
+        setSeatUpdateLoading(false);
+      }
+      return;
+    }
+
+    // For new subscriptions or individual plan, use checkout
     if (!paddleRef.current) {
       showPopup('Billing is not ready yet. Please try again in a moment.', 'error');
       return;
@@ -385,13 +489,25 @@ const PlanView: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-2 text-base text-muted-foreground">
             {summary.individualSubscription && (
-              <p>
-                Individual status: {summary.individualSubscription.status}
-              </p>
+              <>
+                <p>
+                  Individual status: {summary.individualSubscription.status}
+                </p>
+                {summary.individualSubscription.billingInterval && (
+                  <p>
+                    Billing interval: {summary.individualSubscription.billingInterval === 'month' ? 'Monthly' : summary.individualSubscription.billingInterval === 'year' ? 'Annual' : summary.individualSubscription.billingInterval}
+                  </p>
+                )}
+              </>
             )}
             {summary.orgSubscription && (
               <>
                 <p>Organization status: {summary.orgSubscription.status}</p>
+                {summary.orgSubscription.billingInterval && (
+                  <p>
+                    Billing interval: {summary.orgSubscription.billingInterval === 'month' ? 'Monthly' : summary.orgSubscription.billingInterval === 'year' ? 'Annual' : summary.orgSubscription.billingInterval}
+                  </p>
+                )}
                 {summary.orgSubscription.seatsTotal !== null && (
                   <p>
                     Seats: {summary.orgSubscription.seatsUsed ?? 0} /{' '}
@@ -511,8 +627,13 @@ const PlanView: React.FC = () => {
             </ul>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full" disabled>
-              You&apos;re on the Free plan
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleCheckout('free')}
+              disabled={currentPlan === 'free' || isPriceLoading || !!paddleError || !paddleReady}
+            >
+              {currentPlan === 'free' ? "You're on the Free plan" : 'Switch to Free plan'}
             </Button>
           </CardFooter>
         </Card>
@@ -571,10 +692,10 @@ const PlanView: React.FC = () => {
             <Button
               className="w-full"
               onClick={() => handleCheckout('individual')}
-              disabled={isPriceLoading || !!paddleError || !paddleReady}
+              disabled={(currentPlan === 'individual') || isPriceLoading || !!paddleError || !paddleReady}
             >
               {isPriceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {currentPlan === 'individual' ? 'Change individual plan' : 'Upgrade to Individual'}
+              {currentPlan === 'free' ? 'Upgrade to Individual' : currentPlan === 'individual' ? "You're on the Individual plan" : 'Switch to Individual plan'}
             </Button>
           </CardFooter>
         </Card>
@@ -652,10 +773,21 @@ const PlanView: React.FC = () => {
             <Button
               className="w-full"
               onClick={() => handleCheckout('org')}
-              disabled={isPriceLoading || !!paddleError || !paddleReady}
+              disabled={
+                seatUpdateLoading ||
+                (currentPlan === 'org' && summary?.orgSubscription?.status === 'active'
+                  ? false // For existing org subscriptions, only disable if updating
+                  : isPriceLoading || !!paddleError || !paddleReady) // For new subscriptions, need Paddle ready
+              }
             >
-              {isPriceLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {currentPlan === 'org' ? 'Change seats / org plan' : 'Upgrade to Organization'}
+              {(isPriceLoading || seatUpdateLoading) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {currentPlan === 'org'
+                ? seatUpdateLoading
+                  ? 'Updating seats...'
+                  : 'Update Seats'
+                : 'Upgrade to Organization'}
             </Button>
           </CardFooter>
         </Card>

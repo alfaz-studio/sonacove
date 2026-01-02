@@ -26,43 +26,15 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1768500000000,
-      "tag": "0003_organizations_sync",
+      "when": 1767306411385,
+      "tag": "0003_tiny_roulette",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1765538311315,
-      "tag": "0004_sour_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1765808135768,
-      "tag": "0005_glossy_living_mummy",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1765979464413,
-      "tag": "0006_true_ricochet",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1765979500644,
-      "tag": "0007_mature_wilson_fisk",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1767110399381,
-      "tag": "0008_flimsy_shriek",
+      "when": 1767307945656,
+      "tag": "0004_overjoyed_the_enforcers",
       "breakpoints": true
     }
   ]

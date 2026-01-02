@@ -243,6 +243,20 @@ export const meetingEvents = sonacoveSchema.table("meeting_events", {
     .defaultNow(),
 });
 
+// Test table - for migration testing
+export const testTable = sonacoveSchema.table("test_table", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: varchar("description", { length: 500 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Define relations (after all tables)
 export const usersRelations = relations(users, ({ one, many }) => ({
   bookedRooms: many(bookedRooms),
@@ -362,6 +376,7 @@ export const schema = {
   bookedRooms,
   meetings,
   meetingEvents,
+  testTable,
   paddleSubscriptions,
   paddleSubscriptionItems,
   paddleBusinesses,

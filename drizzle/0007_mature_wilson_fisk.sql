@@ -1,2 +1,0 @@
-ALTER TABLE "sonacove"."paddle_businesses" ALTER COLUMN "paddle_customer_id" SET NOT NULL;--> statement-breakpoint
-ALTER TABLE "sonacove"."paddle_subscriptions" ALTER COLUMN "paddle_customer_id" SET NOT NULL;

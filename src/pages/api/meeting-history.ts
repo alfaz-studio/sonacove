@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { validateAuth } from "../../lib/modules/auth-helper";
 import { getLogger, logWrapper } from "../../lib/modules/pino-logger";
 import { createDb } from "../../lib/db/drizzle";
-import { meetings, meetingEvents } from "../../lib/db/schema";
-import { and, gte, lte, inArray } from "drizzle-orm";
+import { meetings, meetingEvents, organizationMembers, organizations, users } from "../../lib/db/schema";
+import { and, eq, gte, lte, inArray } from "drizzle-orm";
 import type { MeetingMetaData } from "@/data/meeting-types";
 
 export const prerender = false;
@@ -25,6 +25,51 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       return auth.error;
     }
     const { email: userEmail } = auth.result;
+
+    // Create database connection
+    const db = createDb();
+
+    // Get user's organization membership and role
+    const [dbUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, userEmail))
+      .limit(1);
+
+    let userRole: string | null = null;
+    let orgId: number | null = null;
+    let orgMemberEmails: string[] = [];
+
+    if (dbUser?.id) {
+      const membership = await db
+        .select({
+          orgId: organizations.id,
+          role: organizationMembers.role,
+        })
+        .from(organizationMembers)
+        .innerJoin(
+          organizations,
+          eq(organizationMembers.orgId, organizations.id),
+        )
+        .where(eq(organizationMembers.userId, dbUser.id))
+        .limit(1);
+
+      if (membership.length > 0) {
+        userRole = membership[0].role;
+        orgId = membership[0].orgId;
+
+        // If user is owner or admin, get all org member emails
+        if (userRole === "owner" || userRole === "admin") {
+          const orgMembers = await db
+            .select({ email: users.email })
+            .from(organizationMembers)
+            .innerJoin(users, eq(organizationMembers.userId, users.id))
+            .where(eq(organizationMembers.orgId, orgId));
+          
+          orgMemberEmails = orgMembers.map((m) => m.email).filter(Boolean);
+        }
+      }
+    }
 
     // Parse query parameters for date range
     const url = new URL(request.url);
@@ -55,9 +100,6 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
       // Set to end of day
       toDate.setHours(23, 59, 59, 999);
     }
-
-    // Create database connection
-    const db = createDb();
 
     // Build where clause for date range filtering
     const whereConditions = [];
@@ -248,13 +290,32 @@ const WorkerHandler: APIRoute = async ({ request, locals }) => {
         return identifier;
       });
 
-      // Check if user participated in this meeting (as host or participant)
-      const userParticipated = 
-        hostsArray.includes(userEmail) || 
-        participantsArray.includes(userEmail);
+      // Determine if this meeting should be included based on user role
+      let shouldInclude = false;
 
-      // Only include meetings where the user participated
-      if (!userParticipated) {
+      if (userRole === "owner" || userRole === "admin") {
+        // Owner and admin can see all org meetings
+        // Check if any org member participated in this meeting
+        const orgMemberParticipated = 
+          hostsArray.some((email) => orgMemberEmails.includes(email)) ||
+          participantsArray.some((identifier) => {
+            // Check if identifier is an email and matches an org member
+            if (identifier.includes("@") && !identifier.startsWith("Guest")) {
+              return orgMemberEmails.includes(identifier);
+            }
+            return false;
+          });
+        shouldInclude = orgMemberParticipated;
+      } else {
+        // Teacher and student can only see their own meetings
+        const userParticipated = 
+          hostsArray.includes(userEmail) || 
+          participantsArray.includes(userEmail);
+        shouldInclude = userParticipated;
+      }
+
+      // Only include meetings that pass the visibility check
+      if (!shouldInclude) {
         continue;
       }
 

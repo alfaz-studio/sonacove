@@ -18,4 +18,5 @@ export default defineConfig({
     // table: '', // `__drizzle_migrations` by default
     schema: "drizzle", // `public` by default
   },
+  schemaFilter: ["sonacove"]
 });
